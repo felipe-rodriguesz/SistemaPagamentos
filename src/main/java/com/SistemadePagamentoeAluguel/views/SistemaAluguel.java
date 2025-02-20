@@ -1,74 +1,82 @@
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JTabbedPane;
-import javax.swing.SwingUtilities;
-import java.awt.GridLayout;
+package main.java.com.SistemadePagamentoeAluguel.views;
+
+import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import javax.swing.*;
+import main.java.com.SistemadePagamentoeAluguel.views.AdministradorView;
 
 public class SistemaAluguel extends JFrame {
+    private AdministradorView adminView;
 
     public SistemaAluguel() {
         setTitle("Sistema de Aluguel");
-        setSize(500, 400);
+        setSize(600, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Painel de Abas
         JTabbedPane tabbedPane = new JTabbedPane();
-
-        // Painel do Cliente
-        JPanel clientePanel = criarPainelCliente();
-        tabbedPane.addTab("Cliente", clientePanel);
-
-        // Painel do Administrador
-        JPanel adminPanel = criarPainelAdministrador();
-        tabbedPane.addTab("Administrador", adminPanel);
-
+        tabbedPane.addTab("Cliente", criarPainelCliente());
+        tabbedPane.addTab("Administrador", criarPainelAdministrador());
         add(tabbedPane);
     }
 
-    // Criando painel de Cliente
     private JPanel criarPainelCliente() {
-        JPanel panel = new JPanel(new GridLayout(6, 1, 10, 10));
-
-        adicionarBotao(panel, "Fazer Reserva");
-        adicionarBotao(panel, "Alugar Item");
-        adicionarBotao(panel, "Renovar Aluguel");
-        adicionarBotao(panel, "Cancelar Aluguel");
-        adicionarBotao(panel, "Consultar Histórico");
-
+        JPanel panel = new JPanel(new GridLayout(5, 1, 10, 10));
+        String[] botoes = {"Fazer Reserva", "Alugar Item", "Renovar Aluguel", "Cancelar Aluguel", "Consultar Histórico"};
+        
+        for (String titulo : botoes) {
+            JButton btn = new JButton(titulo);
+            btn.addActionListener(this::handleClienteAction);
+            panel.add(btn);
+        }
         return panel;
     }
 
-    // Criando painel do Administrador
     private JPanel criarPainelAdministrador() {
         JPanel panel = new JPanel(new GridLayout(3, 1, 10, 10));
-
-        adicionarBotao(panel, "Gerenciar Aluguéis");
-        adicionarBotao(panel, "Gerenciar Pagamentos");
-        adicionarBotao(panel, "Gerar Relatórios");
-
+        String[] botoes = {"Gerenciar Aluguéis", "Gerenciar Pagamentos", "Gerar Relatórios"};
+        
+        for (String titulo : botoes) {
+            JButton btn = new JButton(titulo);
+            btn.addActionListener(this::handleAdminAction);
+            panel.add(btn);
+        }
         return panel;
     }
 
-    // Método para adicionar botões com ação
-    private void adicionarBotao(JPanel panel, String titulo) {
-        JButton button = new JButton(titulo);
-        button.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(null, "Ação: " + titulo, "Informação", JOptionPane.INFORMATION_MESSAGE);
-            }
-        });
-        panel.add(button);
+    private void handleClienteAction(ActionEvent e) {
+        String comando = ((JButton) e.getSource()).getText();
+        JOptionPane.showMessageDialog(this, "Funcionalidade em desenvolvimento: " + comando);
     }
 
-    // Método principal para executar o programa
+    private void handleAdminAction(ActionEvent e) {
+        String comando = ((JButton) e.getSource()).getText();
+        
+        switch (comando) {
+            case "Gerar Relatórios":
+                abrirPainelAdministrativo();
+                break;
+            case "Gerenciar Aluguéis":
+            case "Gerenciar Pagamentos":
+                JOptionPane.showMessageDialog(this, "Funcionalidade em desenvolvimento: " + comando);
+                break;
+        }
+    }
+
+    private void abrirPainelAdministrativo() {
+        if (adminView == null) {
+            adminView = new AdministradorView();
+        }
+        
+        if (adminView.solicitarLogin()) {
+            adminView.exibirPainelControle();
+            adminView.setVisible(true);
+        } else {
+            JOptionPane.showMessageDialog(this, "Acesso negado!", "Erro", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new SistemaAluguel().setVisible(true);
-        });
+        EventQueue.invokeLater(() -> new SistemaAluguel().setVisible(true));
     }
 }
