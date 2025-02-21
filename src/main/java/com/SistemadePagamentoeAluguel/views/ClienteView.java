@@ -3,7 +3,9 @@ package main.java.com.SistemadePagamentoeAluguel.views;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.swing.*;
 import main.java.com.SistemadePagamentoeAluguel.controllers.AluguelController;
@@ -16,14 +18,16 @@ public class ClienteView extends JFrame {
     private AluguelController aluguelController;
 
     private JTextArea areaTexto;
+    private List<Item> todosItens;
     private JComboBox<String> comboItens;
-    private JButton btnReservar, btnAlugar, btnRenovar, btnPagar, btnExibirRecibo, btnHistorico;
+    private JButton btnReservar, btnAlugar, btnRenovar, btnPagar, btnExibirRecibo, btnHistorico, btnCancelar;
 
     public ClienteView(Cliente cliente, ReservaController reservaController, AluguelController aluguelController) {
         this.cliente = cliente;
         this.reservaController = reservaController;
         this.aluguelController = aluguelController;
-
+        todosItens = reservaController.listarItensDisponiveis(new ArrayList<>());
+        configurarJanela();
         configurarJanela();
         inicializarComponentes();
     }
@@ -42,7 +46,7 @@ public class ClienteView extends JFrame {
         JPanel painelControle = new JPanel(new FlowLayout());
 
         // Lista de itens disponíveis filtrados
-        List<Item> itensDisponiveis = reservaController.listarItensDisponiveis()
+        List<Item> itensDisponiveis = reservaController.listarItensDisponiveis(todosItens)
                 .stream().filter(Item::isDisponivel)
                 .collect(Collectors.toList());
 
@@ -56,12 +60,14 @@ public class ClienteView extends JFrame {
         btnPagar = new JButton("Efetuar Pagamento");
         btnExibirRecibo = new JButton("Exibir Recibo");
         btnHistorico = new JButton("Exibir Histórico");
-
+        btnCancelar = new JButton("Cancelar Aluguel");
         btnReservar.addActionListener(this::solicitarReserva);
         btnAlugar.addActionListener(this::solicitarAluguel);
         btnRenovar.addActionListener(this::solicitarRenovacao);
         btnPagar.addActionListener(this::efetuarPagamento);
         btnExibirRecibo.addActionListener(this::exibirRecibo);
+        btnHistorico.addActionListener(this::exibirHistorico);
+        btnCancelar.addActionListener(this::solicitarCancelamento);
         btnHistorico.addActionListener(this::exibirHistorico);
 
         painelControle.add(new JLabel("Selecionar Item:"));
@@ -69,7 +75,8 @@ public class ClienteView extends JFrame {
         painelControle.add(btnReservar);
         painelControle.add(btnAlugar);
         painelControle.add(btnRenovar);
-        painelControle.add(btnPagar);
+        painelControle.add(btnHistorico);
+        painelControle.add(btnCancelar);
         painelControle.add(btnExibirRecibo);
         painelControle.add(btnHistorico);
 
@@ -83,7 +90,7 @@ public class ClienteView extends JFrame {
     }
 
     private void solicitarReserva(ActionEvent e) {
-        Item item = obterItemSelecionado();
+        Item item = selecionarItem();
         if (item == null) return;
 
         if (!item.isDisponivel()) {
@@ -91,12 +98,14 @@ public class ClienteView extends JFrame {
             return;
         }
 
-        Reserva reserva = reservaController.reservarItem(cliente, item);
-        areaTexto.setText(reserva != null ? "Reserva realizada com sucesso!" : "Erro ao reservar item.");
+        LocalDate dataInicio = LocalDate.now();
+        LocalDate dataFim = dataInicio.plusDays(7);
+        Optional<Reserva> reservaOpt = reservaController.criarReserva(cliente, item, dataInicio, dataFim);
+        areaTexto.setText(reservaOpt.isPresent() ? "Reserva realizada com sucesso!" : "Erro ao reservar item.");
     }
 
     private void solicitarAluguel(ActionEvent e) {
-        Item item = obterItemSelecionado();
+        Item item = selecionarItem();
         if (item == null) return;
 
         if (!item.isDisponivel()) {
@@ -108,8 +117,10 @@ public class ClienteView extends JFrame {
         if (diasStr != null && !diasStr.isEmpty()) {
             try {
                 int dias = Integer.parseInt(diasStr);
-                Aluguel aluguel = aluguelController.alugarItem(cliente, item, dias);
-                areaTexto.setText(aluguel != null ? "Aluguel realizado com sucesso!" : "Erro ao alugar item.");
+                LocalDate dataInicio = LocalDate.now();
+                LocalDate dataFim = dataInicio.plusDays(Integer.parseInt(diasStr));
+                Optional<Aluguel> aluguelOpt = aluguelController.criarAluguel(cliente, item, dataInicio, dataFim);
+                areaTexto.setText(aluguelOpt.isPresent() ? "Aluguel realizado com sucesso!" : "Erro ao alugar item.");
             } catch (NumberFormatException ex) {
                 areaTexto.setText("Número de dias inválido.");
             }
@@ -117,7 +128,7 @@ public class ClienteView extends JFrame {
     }
 
     private void solicitarRenovacao(ActionEvent e) {
-        List<Aluguel> alugueis = aluguelController.listarAlugueis(Aluguel.StatusAluguel.ATIVO);
+        List<Aluguel> alugueis = aluguelController.listarAlugueisAtivos();
         if (alugueis.isEmpty()) {
             areaTexto.setText("Você não tem aluguéis ativos para renovar.");
             return;
@@ -127,7 +138,8 @@ public class ClienteView extends JFrame {
         if (novaDataStr != null && !novaDataStr.isEmpty()) {
             try {
                 LocalDate novaData = LocalDate.parse(novaDataStr);
-                boolean sucesso = aluguelController.renovarAluguel(alugueis.get(0), novaData);
+                Item item = selecionarItem();
+                boolean sucesso = aluguelController.renovarAluguel(cliente, item, novaData);
                 areaTexto.setText(sucesso ? "Renovação realizada com sucesso!" : "Erro ao renovar aluguel.");
             } catch (Exception ex) {
                 areaTexto.setText("Formato de data inválido.");
@@ -153,6 +165,21 @@ public class ClienteView extends JFrame {
         areaTexto.setText("Recibo: " + ultimaTransacao.getDescricao() + " - Valor: R$" + String.format("%.2f", ultimaTransacao.getValor()));
     }
 
+    private void solicitarCancelamento(ActionEvent e) {
+        List<Aluguel> alugueis = aluguelController.listarAlugueisAtivos();
+        if (alugueis.isEmpty()) {
+            areaTexto.setText("Você não tem aluguéis ativos para cancelar.");
+            return;
+        }
+
+        Item item = selecionarItem();
+        int aluguelId = aluguelController.listarAlugueisAtivos().stream()
+                .filter(a -> a.getItem().equals(item))
+                .findFirst().map(Aluguel::getId).orElse(-1);
+        boolean sucesso = aluguelController.cancelarAluguel(aluguelId);
+        areaTexto.setText(sucesso ? "Aluguel cancelado com sucesso!" : "Erro ao cancelar aluguel.");
+    }
+
     private void exibirHistorico(ActionEvent e) {
         List<Transacao> historico = cliente.consultarHistorico();
         if (historico.isEmpty()) {
@@ -169,13 +196,12 @@ public class ClienteView extends JFrame {
         areaTexto.setText(sb.toString());
     }
 
-    private Item obterItemSelecionado() {
-        String selecao = (String) comboItens.getSelectedItem();
-        if (selecao == null) return null;
+    private Item selecionarItem() {
+        String itemStr = (String) comboItens.getSelectedItem();
+        if (itemStr == null) return null;
 
-        int id = Integer.parseInt(selecao.split(" - ")[0]); // Extrai o ID
-        Reserva reserva = reservaController.buscarPorId(id);
-        return reserva != null ? reserva.getItem() : null;
+        int id = Integer.parseInt(itemStr.split(" - ")[0]);
+        return todosItens.stream().filter(i -> i.getId() == id).findFirst().orElse(null);
     }
 
     public void exibirPainelCliente() {

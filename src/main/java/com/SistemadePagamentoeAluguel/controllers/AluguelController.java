@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import main.java.com.SistemadePagamentoeAluguel.models.*;
+import main.java.com.SistemadePagamentoeAluguel.models.Aluguel;
+import main.java.com.SistemadePagamentoeAluguel.models.Cliente;
+import main.java.com.SistemadePagamentoeAluguel.models.Item;
 
 public class AluguelController {
     private final List<Aluguel> alugueis = new ArrayList<>();
@@ -52,6 +54,22 @@ public class AluguelController {
                 return true;
             }
         }
+        return false;
+    }
+
+    public boolean renovarAluguel(Cliente cliente, Item item, LocalDate novaData) {
+        Optional<Aluguel> aluguelOpt = alugueis.stream()
+            .filter(a -> a.getCliente().equals(cliente) && a.getItem().equals(item))
+            .findFirst();
+        
+        if (aluguelOpt.isPresent()) {
+            Aluguel aluguel = aluguelOpt.get();
+            if (aluguel.renovar(novaData)) {
+                System.out.println("[SUCESSO] Aluguel renovado ID: " + aluguel.getId());
+                return true;
+            }
+        }
+        System.out.println("[ERRO] Aluguel não encontrado");
         return false;
     }
 

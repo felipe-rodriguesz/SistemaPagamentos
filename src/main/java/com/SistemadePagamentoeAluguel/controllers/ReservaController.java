@@ -6,7 +6,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import main.java.com.SistemadePagamentoeAluguel.models.*;
+import main.java.com.SistemadePagamentoeAluguel.models.Cliente;
+import main.java.com.SistemadePagamentoeAluguel.models.Item;
+import main.java.com.SistemadePagamentoeAluguel.models.Reserva;
 
 public class ReservaController {
     private final List<Reserva> reservas = new ArrayList<>();

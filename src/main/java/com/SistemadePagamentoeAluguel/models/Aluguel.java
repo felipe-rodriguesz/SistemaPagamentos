@@ -50,16 +50,16 @@ public class Aluguel {
     public StatusAluguel getStatus() { return status; }
 
     // Métodos de negócio
-    public void renovar(LocalDate novaDataFim) {
+    public boolean renovar(LocalDate novaDataFim) {
         if (status != StatusAluguel.ATIVO) {
-            throw new IllegalStateException("Aluguel deve estar ativo para renovação");
+            throw new IllegalStateException("Aluguel não está ativo");
         }
         if (novaDataFim.isBefore(dataFim)) {
-            throw new IllegalArgumentException("Nova data deve ser posterior ao término atual");
+            throw new IllegalArgumentException("Nova data de fim anterior à data atual");
         }
-        
         dataFim = novaDataFim;
         status = StatusAluguel.RENOVADO;
+        return true;
     }
 
     public boolean  cancelar() {
