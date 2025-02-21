@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import main.java.com.SistemadePagamentoeAluguel.controllers.AluguelController;
+import main.java.com.SistemadePagamentoeAluguel.controllers.ReservaController;
+import main.java.com.SistemadePagamentoeAluguel.models.Cliente;
 import main.java.com.SistemadePagamentoeAluguel.models.DateRange;
 import main.java.com.SistemadePagamentoeAluguel.models.Pagamento;
 import main.java.com.SistemadePagamentoeAluguel.models.Relatorio;
@@ -18,6 +21,13 @@ public class SistemaAluguel extends JFrame {
     private DefaultTableModel modeloTabela;
     private List<Pagamento> pagamentos = new ArrayList<>(); // Lista temporária para demonstração
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    
+    // Controladores necessários para ClienteView
+    private ReservaController reservaController = new ReservaController();
+    private AluguelController aluguelController = new AluguelController();
+    
+    // Cliente padrão (para demonstração)
+    private final Cliente clientePadrao = new Cliente(1, "cliente_demo", "Cliente Demo");
 
     public SistemaAluguel() {
         setTitle("Sistema de Aluguel");
@@ -32,8 +42,17 @@ public class SistemaAluguel extends JFrame {
     }
 
     private JPanel criarPainelCliente() {
-        JPanel panel = new JPanel(new GridLayout(5, 1, 10, 10));
-        String[] botoes = {"Fazer Reserva", "Alugar Item", "Renovar Aluguel", "Cancelar Aluguel", "Consultar Histórico"};
+        JPanel panel = new JPanel(new GridLayout(6, 1, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
+        String[] botoes = {
+            "Fazer Reserva", 
+            "Alugar Item", 
+            "Renovar Aluguel", 
+            "Consultar Histórico",
+            "Efetuar Pagamento",
+            "Cancelar Aluguel"
+        };
         
         for (String titulo : botoes) {
             JButton btn = new JButton(titulo);
@@ -45,6 +64,8 @@ public class SistemaAluguel extends JFrame {
 
     private JPanel criarPainelAdministrador() {
         JPanel panel = new JPanel(new GridLayout(3, 1, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
         String[] botoes = {"Gerenciar Aluguéis", "Gerenciar Pagamentos", "Gerar Relatórios"};
         
         for (String titulo : botoes) {
@@ -64,6 +85,7 @@ public class SistemaAluguel extends JFrame {
             case "Renovar Aluguel":
             case "Cancelar Aluguel":
             case "Consultar Histórico":
+            case "Efetuar Pagamento":
                 abrirPainelCliente();
                 break;
             default:
@@ -72,7 +94,8 @@ public class SistemaAluguel extends JFrame {
     }
 
     private void abrirPainelCliente() {
-        ClienteView clienteView = new ClienteView(null, null, null);
+        // Criando instância de ClienteView com o cliente padrão e os controladores
+        ClienteView clienteView = new ClienteView(clientePadrao, reservaController, aluguelController);
         clienteView.exibirPainelCliente();
     }
 
