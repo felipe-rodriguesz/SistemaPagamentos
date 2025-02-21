@@ -2,7 +2,9 @@ package main.java.com.SistemadePagamentoeAluguel.views;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.swing.*;
 import main.java.com.SistemadePagamentoeAluguel.controllers.RelatorioController;
 import main.java.com.SistemadePagamentoeAluguel.models.DateRange;
@@ -114,5 +116,16 @@ public class AdministradorView extends JFrame {
 
     public void exibirPainelControle() {
         setVisible(true);
+    }
+
+    protected Relatorio gerarRelatorioPersonalizado(String tipo, DateRange periodo) {
+        List<String> dadosRelatorio = new ArrayList<>();
+        dadosRelatorio.add("=== Relatório " + tipo + " ===");
+        dadosRelatorio.add("Período: " + periodo.getInicio() + " até " + periodo.getFim());
+        dadosRelatorio.add("Data de geração: " + new Date());
+        dadosRelatorio.add("==================");
+        int id = relatorioController.gerarIdRelatorio();
+
+        return new Relatorio(id, tipo, dadosRelatorio, new Date());
     }
 }

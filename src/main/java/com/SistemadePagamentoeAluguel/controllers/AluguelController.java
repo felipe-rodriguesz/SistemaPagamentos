@@ -67,4 +67,20 @@ public class AluguelController {
             .findFirst();
     }
 
+    public boolean renovarAluguel(int idAluguel, LocalDate novaDataFim) {
+        Optional<Aluguel> aluguelOpt = buscarAluguel(idAluguel);
+        
+        if (aluguelOpt.isPresent()) {
+            Aluguel aluguel = aluguelOpt.get();
+            aluguel.renovar(novaDataFim);
+            return true;
+        }
+        return false;
+    }
+
+    public List<Aluguel> listarAlugueisPorStatus(Aluguel.StatusAluguel status) {
+        return alugueis.stream()
+            .filter(a -> a.getStatus() == status)
+            .toList();
+    }
 }

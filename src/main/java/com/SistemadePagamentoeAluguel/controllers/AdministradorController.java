@@ -1,13 +1,11 @@
 package main.java.com.SistemadePagamentoeAluguel.controllers;
 
-import main.java.com.SistemadePagamentoeAluguel.models.Administrador;
-import main.java.com.SistemadePagamentoeAluguel.models.Aluguel.StatusAluguel;
-import main.java.com.SistemadePagamentoeAluguel.models.Cliente;
-import main.java.com.SistemadePagamentoeAluguel.models.Aluguel;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import main.java.com.SistemadePagamentoeAluguel.models.Administrador;
+import main.java.com.SistemadePagamentoeAluguel.models.Aluguel;
 
 public class AdministradorController {
     private final List<Administrador> administradores = new ArrayList<>();

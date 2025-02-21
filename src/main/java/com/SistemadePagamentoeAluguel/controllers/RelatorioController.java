@@ -51,5 +51,9 @@ public class RelatorioController {
     private List<String> gerarDadosPagamentos(DateRange periodo) {
         return List.of("Pagamento 1: Confirmado", "Pagamento 2: Pendente");
     }
+
+    public int gerarIdRelatorio() {
+        return idCounter.incrementAndGet();
+    }
 }
 

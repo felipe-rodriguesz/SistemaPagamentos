@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-
 import main.java.com.SistemadePagamentoeAluguel.models.DateRange;
 import main.java.com.SistemadePagamentoeAluguel.models.Pagamento;
 import main.java.com.SistemadePagamentoeAluguel.models.Relatorio;
@@ -164,9 +163,7 @@ public class SistemaAluguel extends JFrame {
         dadosRelatorio.add(4, "");
         dadosRelatorio.add(5, "=== DETALHES DOS PAGAMENTOS ===");
         
-        Relatorio relatorio = new Relatorio();
-        relatorio.setTipo("Pagamentos");
-        relatorio.setDados(dadosRelatorio);
+        Relatorio relatorio = new Relatorio(0, "Pagamentos", dadosRelatorio, null);
         return relatorio;
     }
 
