@@ -1,21 +1,19 @@
 package main.java.com.SistemadePagamentoeAluguel.models;
 
-import java.util.Date;
-import java.util.Objects;
+import java.time.LocalDate;
 
 public class DateRange {
-    private final Date inicio;
-    private final Date fim;
+    private final LocalDate inicio;
+    private final LocalDate fim;
     
-    public DateRange(Date inicio, Date fim) {
-        this.inicio = Objects.requireNonNull(inicio, "Data inicial não pode ser nula");
-        this.fim = Objects.requireNonNull(fim, "Data final não pode ser nula");
-        
-        if (inicio.after(fim)) {
-            throw new IllegalArgumentException("Data inicial não pode ser posterior à data final");
+    public DateRange(LocalDate inicio, LocalDate fim) {
+        if (inicio.isAfter(fim)) {
+            throw new IllegalArgumentException("Data inicial não pode ser posterior à final");
         }
+        this.inicio = inicio;
+        this.fim = fim;
     }
     
-    public Date getInicio() { return new Date(inicio.getTime()); }
-    public Date getFim() { return new Date(fim.getTime()); }
+    public LocalDate getInicio() { return inicio; }
+    public LocalDate getFim() { return fim; }
 }

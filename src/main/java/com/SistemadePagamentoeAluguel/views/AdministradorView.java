@@ -1,67 +1,54 @@
 package main.java.com.SistemadePagamentoeAluguel.views;
 
+import main.java.com.SistemadePagamentoeAluguel.controllers.*;
+import main.java.com.SistemadePagamentoeAluguel.models.*;
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.util.ArrayList;
-import java.util.Date;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import javax.swing.*;
-import main.java.com.SistemadePagamentoeAluguel.controllers.RelatorioController;
-import main.java.com.SistemadePagamentoeAluguel.models.DateRange;
-import main.java.com.SistemadePagamentoeAluguel.models.Relatorio;
 
 public class AdministradorView extends JFrame {
-    private final RelatorioController relatorioController = new RelatorioController();
-    private JComboBox<String> tipoRelatorioComboBox;
-    private JButton btnGerarRelatorio;
-    private JTextArea areaRelatorio;
+    private final PagamentoController pagamentoController;
+    private final AluguelController aluguelController;
+    private JTabbedPane tabbedPane;
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    public AdministradorView() {
+    public AdministradorView(PagamentoController pagamentoController, AluguelController aluguelController) {
+        this.pagamentoController = pagamentoController;
+        this.aluguelController = aluguelController;
         configurarJanela();
-        inicializarComponentes();
+        inicializarUI();
     }
 
     private void configurarJanela() {
         setTitle("Painel Administrativo");
-        setSize(800, 600);
+        setSize(1000, 600);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
     }
 
-    private void inicializarComponentes() {
-        JPanel painelPrincipal = new JPanel(new BorderLayout(10, 10));
-        painelPrincipal.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        // Painel de Controle
-        JPanel painelControle = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        tipoRelatorioComboBox = new JComboBox<>(new String[]{"Aluguéis", "Pagamentos"});
-        btnGerarRelatorio = new JButton("Gerar Relatório");
-        
-        btnGerarRelatorio.addActionListener(this::gerarRelatorio);
-        painelControle.add(new JLabel("Tipo de Relatório:"));
-        painelControle.add(tipoRelatorioComboBox);
-        painelControle.add(btnGerarRelatorio);
-
-        // Área de Texto
-        areaRelatorio = new JTextArea();
-        areaRelatorio.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(areaRelatorio);
-
-        painelPrincipal.add(painelControle, BorderLayout.NORTH);
-        painelPrincipal.add(scrollPane, BorderLayout.CENTER);
-
-        add(painelPrincipal);
+    private void inicializarUI() {
+        tabbedPane = new JTabbedPane();
+        tabbedPane.addTab("Aluguéis", criarPainelAlugueis());
+        tabbedPane.addTab("Pagamentos", criarPainelPagamentos());
+        tabbedPane.addTab("Relatórios", criarPainelRelatorios());
+        add(tabbedPane);
     }
 
+    // Método de Login
     public boolean solicitarLogin() {
-        JPanel painelLogin = new JPanel(new GridLayout(3, 2));
-        JTextField campoUsuario = new JTextField();
-        JPasswordField campoSenha = new JPasswordField();
+        JPanel painelLogin = new JPanel(new GridLayout(3, 2, 10, 10));
+        JTextField txtUsuario = new JTextField();
+        JPasswordField txtSenha = new JPasswordField();
 
         painelLogin.add(new JLabel("Usuário:"));
-        painelLogin.add(campoUsuario);
+        painelLogin.add(txtUsuario);
         painelLogin.add(new JLabel("Senha:"));
-        painelLogin.add(campoSenha);
+        painelLogin.add(txtSenha);
 
         int resultado = JOptionPane.showConfirmDialog(
             this,
@@ -71,61 +58,159 @@ public class AdministradorView extends JFrame {
         );
 
         if (resultado == JOptionPane.OK_OPTION) {
-            String usuario = campoUsuario.getText();
-            char[] senha = campoSenha.getPassword();
+            String usuario = txtUsuario.getText();
+            String senha = new String(txtSenha.getPassword());
             return validarCredenciais(usuario, senha);
         }
         return false;
     }
 
-    private boolean validarCredenciais(String usuario, char[] senha) {
-        // Mock - Substituir por validação real
-        boolean valido = "admin".equals(usuario) && new String(senha).equals("admin123");
-        java.util.Arrays.fill(senha, '0'); // Limpar senha da memória
-        return valido;
+    private boolean validarCredenciais(String usuario, String senha) {
+        // Credenciais mockadas (substituir por validação real)
+        return "admin".equals(usuario) && "admin123".equals(senha);
     }
 
-    private void gerarRelatorio(ActionEvent e) {
-        try {
-            DateRange periodo = obterPeriodo();
-            String tipo = ((String) tipoRelatorioComboBox.getSelectedItem()).toLowerCase();
-            
-            Relatorio relatorio = relatorioController.gerarRelatorio(tipo, periodo);
-            exibirRelatorio(relatorio);
-            
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erro", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private DateRange obterPeriodo() {
-        // Implementar seletor de datas (ex: JDatePicker)
-        return new DateRange(new Date(), new Date()); // Mock
-    }
-
-    private void exibirRelatorio(Relatorio relatorio) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("=== RELATÓRIO ===\n");
-        sb.append("ID: ").append(relatorio.getId()).append("\n");
-        sb.append("Tipo: ").append(relatorio.getTipo()).append("\n");
-        sb.append("Data: ").append(relatorio.getDataGeracao()).append("\n\n");
-        relatorio.getDados().forEach(dado -> sb.append(dado).append("\n"));
+    // Painel de Aluguéis
+    private JPanel criarPainelAlugueis() {
+        JPanel panel = new JPanel(new BorderLayout());
         
-        areaRelatorio.setText(sb.toString());
+        // Tabela
+        String[] colunas = {"ID", "Cliente", "Item", "Início", "Fim", "Status"};
+        DefaultTableModel modelo = new DefaultTableModel(colunas, 0);
+        JTable tabela = new JTable(modelo);
+        atualizarTabelaAlugueis(modelo);
+
+        // Botões
+        JButton btnNovo = new JButton("Novo Aluguel");
+        JButton btnCancelar = new JButton("Cancelar");
+        btnNovo.addActionListener(e -> abrirDialogoNovoAluguel(modelo));
+        btnCancelar.addActionListener(e -> cancelarAluguel(tabela, modelo));
+
+        JPanel painelBotoes = new JPanel();
+        painelBotoes.add(btnNovo);
+        painelBotoes.add(btnCancelar);
+
+        panel.add(new JScrollPane(tabela), BorderLayout.CENTER);
+        panel.add(painelBotoes, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    private void atualizarTabelaAlugueis(DefaultTableModel modelo) {
+        modelo.setRowCount(0);
+        aluguelController.listarAlugueis().forEach(aluguel -> 
+            modelo.addRow(new Object[]{
+                aluguel.getId(),
+                aluguel.getCliente().getNome(),
+                aluguel.getItem().getTitulo(),
+                aluguel.getDataInicio().format(formatter),
+                aluguel.getDataFim().format(formatter),
+                aluguel.getStatus()
+            })
+        );
+    }
+
+    // Painel de Pagamentos
+    private JPanel criarPainelPagamentos() {
+        JPanel panel = new JPanel(new BorderLayout());
+        
+        // Tabela
+        String[] colunas = {"ID", "Valor", "Método", "Status", "Data"};
+        DefaultTableModel modelo = new DefaultTableModel(colunas, 0);
+        JTable tabela = new JTable(modelo);
+        atualizarTabelaPagamentos(modelo);
+
+        // Botões
+        JButton btnRegistrar = new JButton("Registrar Pagamento");
+        JButton btnProcessar = new JButton("Processar");
+        btnRegistrar.addActionListener(e -> abrirDialogoPagamento(modelo));
+        btnProcessar.addActionListener(e -> processarPagamento(tabela, modelo));
+
+        JPanel painelBotoes = new JPanel();
+        painelBotoes.add(btnRegistrar);
+        painelBotoes.add(btnProcessar);
+
+        panel.add(new JScrollPane(tabela), BorderLayout.CENTER);
+        panel.add(painelBotoes, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    private void atualizarTabelaPagamentos(DefaultTableModel modelo) {
+        modelo.setRowCount(0);
+        pagamentoController.listarPagamentos().forEach(pagamento -> 
+            modelo.addRow(new Object[]{
+                pagamento.getId(),
+                String.format("R$ %.2f", pagamento.getValor()),
+                pagamento.getMetodo(),
+                pagamento.getStatus(),
+                pagamento.getData().format(formatter)
+            })
+        );
+    }
+
+    // Painel de Relatórios
+    private JPanel criarPainelRelatorios() {
+        JPanel panel = new JPanel(new BorderLayout());
+        JTextArea areaRelatorio = new JTextArea();
+        JButton btnGerar = new JButton("Gerar Relatório");
+        
+        btnGerar.addActionListener(e -> {
+            DateRange periodo = obterPeriodo();
+            Relatorio relatorioAlugueis = aluguelController.gerarRelatorio("alugueis", periodo);
+            Relatorio relatorioPagamentos = pagamentoController.gerarRelatorio("pagamentos", periodo);
+            
+            areaRelatorio.setText(
+                formatarRelatorio(relatorioAlugueis) + 
+                "\n\n" + 
+                formatarRelatorio(relatorioPagamentos)
+            );
+        });
+
+        panel.add(new JScrollPane(areaRelatorio), BorderLayout.CENTER);
+        panel.add(btnGerar, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    // Métodos auxiliares
+    private DateRange obterPeriodo() {
+        JDialog dialog = new JDialog(this, "Selecionar Período", true);
+        dialog.setLayout(new GridLayout(3, 2));
+        
+        JSpinner inicioSpinner = new JSpinner(new SpinnerDateModel());
+        JSpinner fimSpinner = new JSpinner(new SpinnerDateModel());
+        inicioSpinner.setEditor(new JSpinner.DateEditor(inicioSpinner, "dd/MM/yyyy"));
+        fimSpinner.setEditor(new JSpinner.DateEditor(fimSpinner, "dd/MM/yyyy"));
+        
+        dialog.add(new JLabel("Data Início:"));
+        dialog.add(inicioSpinner);
+        dialog.add(new JLabel("Data Fim:"));
+        dialog.add(fimSpinner);
+        
+        JButton btnConfirmar = new JButton("Confirmar");
+        btnConfirmar.addActionListener(e -> dialog.dispose());
+        dialog.add(btnConfirmar);
+        
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+        
+        LocalDate inicio = ((java.util.Date) inicioSpinner.getValue()).toInstant()
+            .atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        LocalDate fim = ((java.util.Date) fimSpinner.getValue()).toInstant()
+            .atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+        
+        return new DateRange(inicio, fim);
+    }
+
+    private String formatarRelatorio(Relatorio relatorio) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== ").append(relatorio.getTipo().toUpperCase()).append(" ===\n");
+        sb.append("Período: ").append(relatorio.getDataGeracao().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().format(formatter)).append("\n");
+        sb.append("Total de Registros: ").append(relatorio.getDados().size()).append("\n\n");
+        relatorio.getDados().forEach(linha -> sb.append(linha).append("\n"));
+        return sb.toString();
     }
 
     public void exibirPainelControle() {
         setVisible(true);
-    }
-
-    protected Relatorio gerarRelatorioPersonalizado(String tipo, DateRange periodo) {
-        List<String> dadosRelatorio = new ArrayList<>();
-        dadosRelatorio.add("=== Relatório " + tipo + " ===");
-        dadosRelatorio.add("Período: " + periodo.getInicio() + " até " + periodo.getFim());
-        dadosRelatorio.add("Data de geração: " + new Date());
-        dadosRelatorio.add("==================");
-        int id = relatorioController.gerarIdRelatorio();
-
-        return new Relatorio(id, tipo, dadosRelatorio, new Date());
     }
 }

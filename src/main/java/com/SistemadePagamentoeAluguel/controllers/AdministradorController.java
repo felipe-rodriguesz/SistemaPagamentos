@@ -38,6 +38,7 @@ public class AdministradorController {
     }
 
     public boolean cancelarAluguel(int idAluguel) {
-        return aluguelController.cancelarAluguel(idAluguel);
+        aluguelController.cancelarAluguel(idAluguel);
+        return true;
     }
 }
