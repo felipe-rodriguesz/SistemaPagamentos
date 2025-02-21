@@ -5,58 +5,77 @@ import java.util.Objects;
 
 public class Aluguel {
     private final int id;
+    private final Cliente cliente;
+    private final Item item;
     private final LocalDate dataInicio;
     private LocalDate dataFim;
     private StatusAluguel status;
 
-    // Enum para definir os estados possíveis
+    // Enum para estados do aluguel
     public enum StatusAluguel {
         ATIVO, CANCELADO, RENOVADO
     }
 
-    // Construtor principal com validações
-    public Aluguel(int id, LocalDate dataInicio, LocalDate dataFim, StatusAluguel status) {
-        validarDatas(dataInicio, dataFim);
+    public Aluguel(int id, Cliente cliente, Item item, LocalDate dataInicio, LocalDate dataFim) {
+        validarParametros(cliente, item, dataInicio, dataFim);
         
         this.id = id;
+        this.cliente = cliente;
+        this.item = item;
         this.dataInicio = dataInicio;
         this.dataFim = dataFim;
-        this.status = Objects.requireNonNull(status, "Status não pode ser nulo");
+        this.status = StatusAluguel.ATIVO;
     }
 
-    // Validação de datas
-    private void validarDatas(LocalDate dataInicio, LocalDate dataFim) {
-        Objects.requireNonNull(dataInicio, "Data de início não pode ser nula");
-        Objects.requireNonNull(dataFim, "Data de fim não pode ser nula");
+    private void validarParametros(Cliente cliente, Item item, LocalDate inicio, LocalDate fim) {
+        Objects.requireNonNull(cliente, "Cliente não pode ser nulo");
+        Objects.requireNonNull(item, "Item não pode ser nulo");
+        Objects.requireNonNull(inicio, "Data de início não pode ser nula");
+        Objects.requireNonNull(fim, "Data de fim não pode ser nula");
         
-        if (dataFim.isBefore(dataInicio)) {
-            throw new IllegalArgumentException("Data de fim não pode ser anterior à data de início");
+        if (fim.isBefore(inicio)) {
+            throw new IllegalArgumentException("Data final anterior à data inicial");
+        }
+        if (!item.isDisponivel()) {
+            throw new IllegalStateException("Item já está alugado/reservado");
         }
     }
 
-    // Getters (sem setters para imutabilidade parcial)
+    // Getters
     public int getId() { return id; }
+    public Cliente getCliente() { return cliente; }
+    public Item getItem() { return item; }
     public LocalDate getDataInicio() { return dataInicio; }
     public LocalDate getDataFim() { return dataFim; }
     public StatusAluguel getStatus() { return status; }
 
-    // Método para renovação com validação
+    // Métodos de negócio
     public void renovar(LocalDate novaDataFim) {
         if (status != StatusAluguel.ATIVO) {
-            throw new IllegalStateException("Só é possível renovar aluguéis ativos");
+            throw new IllegalStateException("Aluguel deve estar ativo para renovação");
         }
         if (novaDataFim.isBefore(dataFim)) {
-            throw new IllegalArgumentException("Nova data deve ser posterior à data atual");
+            throw new IllegalArgumentException("Nova data deve ser posterior ao término atual");
         }
-        this.dataFim = novaDataFim;
-        this.status = StatusAluguel.RENOVADO;
+        
+        dataFim = novaDataFim;
+        status = StatusAluguel.RENOVADO;
     }
 
-    // Método para cancelamento
-    public void cancelar() {
+    public boolean  cancelar() {
         if (status == StatusAluguel.CANCELADO) {
-            throw new IllegalStateException("Aluguel já cancelado");
+            throw new IllegalStateException("Aluguel já está cancelado");
         }
-        this.status = StatusAluguel.CANCELADO;
+        status = StatusAluguel.CANCELADO;
+        item.marcarComoDevolvido(); // Libera o item
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return String.format(
+            "Aluguel [ID: %d | Cliente: %s | Item: %s | Período: %s a %s | Status: %s]",
+            id, cliente.getNome(), item.getTitulo(), dataInicio, dataFim, status
+        );
     }
 }

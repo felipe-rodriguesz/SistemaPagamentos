@@ -1,47 +1,45 @@
 package main.java.com.SistemadePagamentoeAluguel.controllers;
 
-import java.util.List;
-import java.util.Objects;
 import main.java.com.SistemadePagamentoeAluguel.models.Administrador;
-import main.java.com.SistemadePagamentoeAluguel.models.Aluguel;
 import main.java.com.SistemadePagamentoeAluguel.models.Aluguel.StatusAluguel;
+import main.java.com.SistemadePagamentoeAluguel.models.Cliente;
+import main.java.com.SistemadePagamentoeAluguel.models.Aluguel;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 public class AdministradorController {
-    private List<Administrador> administradores;
-    private List<Aluguel> alugueis;
+    private final List<Administrador> administradores = new ArrayList<>();
+    private final AluguelController aluguelController;
 
-    public AdministradorController(List<Administrador> administradores, List<Aluguel> alugueis) {
-        this.administradores = Objects.requireNonNull(administradores, "Lista de administradores não pode ser nula");
-        this.alugueis = Objects.requireNonNull(alugueis, "Lista de aluguéis não pode ser nula");
+    public AdministradorController(AluguelController aluguelController) {
+        this.aluguelController = aluguelController;
+        carregarAdminsPadrao();
+    }
+
+    private void carregarAdminsPadrao() {
+        administradores.add(new Administrador("admin@sys.com", "admin123"));
     }
 
     public boolean autenticarAdmin(String email, String senha) {
         return administradores.stream()
-                .anyMatch(admin -> admin.getEmail().equals(email) && admin.getSenha().equals(senha));
+            .anyMatch(admin -> admin.getEmail().equals(email) && admin.validarSenha(senha));
     }
 
-    public void listarAlugueis() {
-        alugueis.forEach(aluguel -> 
-            System.out.println("Aluguel ID: " + aluguel.getId() + " | Status: " + aluguel.getStatus()));
+    public List<Aluguel> listarAlugueisAtivos() {
+        return aluguelController.listarAlugueisPorStatus(Aluguel.StatusAluguel.ATIVO); // implmentar
     }
 
-    public boolean editarAluguel(int aluguelId, Aluguel novosDados) {
-        for (Aluguel aluguel : alugueis) {
-            if (aluguel.getId() == aluguelId) {
-                aluguel.renovar(novosDados.getDataFim());
-                return true;
-            }
-        }
-        return false;
+    public Optional<Aluguel> buscarAluguelPorId(int id) {
+        return aluguelController.buscarAluguel(id);
     }
 
-    public boolean forcarCancelamento(int aluguelId) {
-        for (Aluguel aluguel : alugueis) {
-            if (aluguel.getId() == aluguelId && aluguel.getStatus() != StatusAluguel.CANCELADO) {
-                aluguel.cancelar();
-                return true;
-            }
-        }
-        return false;
+    public boolean renovarAluguel(int idAluguel, LocalDate novaDataFim) {
+        return aluguelController.renovarAluguel(idAluguel, novaDataFim); // implementar
+    }
+
+    public boolean cancelarAluguel(int idAluguel) {
+        return aluguelController.cancelarAluguel(idAluguel);
     }
 }

@@ -1,84 +1,81 @@
 package main.java.com.SistemadePagamentoeAluguel.controllers;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
+import java.util.Collections;
 import java.util.List;
-import main.java.com.SistemadePagamentoeAluguel.models.Cliente;
-import main.java.com.SistemadePagamentoeAluguel.models.Item;
-import main.java.com.SistemadePagamentoeAluguel.models.Reserva;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import main.java.com.SistemadePagamentoeAluguel.models.*;
 
 public class ReservaController {
-    private List<Reserva> reservas;
-    private int idCounter = 1;
+    private final List<Reserva> reservas = new ArrayList<>();
+    private final AtomicInteger idCounter = new AtomicInteger(1);
 
-    public ReservaController() {
-        this.reservas = new ArrayList<>();
-    }
-
-    public Reserva reservarItem(Cliente cliente, Item item) {
+    public Optional<Reserva> criarReserva(Cliente cliente, Item item, LocalDate dataInicio, LocalDate dataFim) {
         if (cliente == null || item == null) {
-            System.out.println("Erro: Cliente ou item inválido.");
-            return null;
+            System.out.println("[ERRO] Cliente ou item inválido");
+            return Optional.empty();
         }
 
-        if (isItemReservado(item)) {
-            System.out.println("Erro: O item já está reservado.");
-            return null;
+        if (!item.isDisponivel() || isItemReservado(item)) {
+            System.out.println("[ERRO] Item já reservado/alugado");
+            return Optional.empty();
         }
 
-        Reserva novaReserva = new Reserva(idCounter++, new Date());
-        reservas.add(novaReserva);
-        System.out.println("Reserva realizada com sucesso!");
-        return novaReserva;
+        try {
+            Reserva reserva = new Reserva(
+                idCounter.getAndIncrement(),
+                cliente,
+                item,
+                dataInicio,
+                dataFim
+            );
+            
+            item.marcarComoAlugado();
+            reservas.add(reserva);
+            System.out.println("[SUCESSO] Reserva ID: " + reserva.getId());
+            return Optional.of(reserva);
+            
+        } catch (IllegalArgumentException e) {
+            System.out.println("[ERRO] " + e.getMessage());
+            return Optional.empty();
+        }
     }
 
-    public boolean cancelarReserva(Reserva reserva) {
-        if (reserva.getStatus() == Reserva.StatusReserva.CANCELADA) {
-            System.out.println("Erro: A reserva já foi cancelada.");
-            return false;
-        }
+    public boolean cancelarReserva(int idReserva) {
+        Optional<Reserva> reservaOpt = buscarReserva(idReserva);
         
-        reserva.cancelar();
-        System.out.println("Reserva cancelada com sucesso!");
-        return true;
-    }
-
-    public void cadastrarReserva(Reserva reserva) {
-        reservas.add(reserva);
-        System.out.println("Reserva cadastrada com sucesso!");
-    }
-
-    public List<Reserva> listarReservas() {
-        return reservas;
-    }
-
-    public Reserva buscarPorId(int idReserva) {
-        for (Reserva reserva : reservas) {
-            if (reserva.getId() == idReserva) {
-                return reserva;
-            }
-        }
-        System.out.println("Erro: Reserva não encontrada.");
-        return null;
-    }
-
-    private boolean isItemReservado(Item item) {
-        for (Reserva reserva : reservas) {
-            if (reserva.getStatus() == Reserva.StatusReserva.CONFIRMADA) {
+        if (reservaOpt.isPresent()) {
+            Reserva reserva = reservaOpt.get();
+            if (reserva.cancelar()) {
+                reserva.getItem().marcarComoDevolvido();
                 return true;
             }
         }
         return false;
     }
 
-    public Collection<Item> listarItensDisponiveis() {
-        List<Item> itensDisponiveis = new ArrayList<>();
-        for (Reserva reserva : reservas) {
-            if (reserva.getStatus() != Reserva.StatusReserva.CONFIRMADA) {
-                itensDisponiveis.add(reserva.getItem());
-            }
-        }
-        return itensDisponiveis;
+    public List<Reserva> listarReservasAtivas() {
+        return reservas.stream()
+            .filter(r -> r.getStatus() == Reserva.StatusReserva.ATIVA)
+            .toList();
+    }
+
+    public Optional<Reserva> buscarReserva(int idReserva) {
+        return reservas.stream()
+            .filter(r -> r.getId() == idReserva)
+            .findFirst();
+    }
+
+    private boolean isItemReservado(Item item) {
+        return reservas.stream()
+            .anyMatch(r -> r.getItem().equals(item) && r.getStatus() == Reserva.StatusReserva.ATIVA);
+    }
+
+    public List<Item> listarItensDisponiveis(List<Item> todosItens) {
+        List<Item> disponiveis = new ArrayList<>(todosItens);
+        disponiveis.removeIf(item -> !item.isDisponivel() || isItemReservado(item));
+        return Collections.unmodifiableList(disponiveis);
     }
 }

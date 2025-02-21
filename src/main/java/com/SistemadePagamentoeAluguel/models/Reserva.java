@@ -1,58 +1,41 @@
 package main.java.com.SistemadePagamentoeAluguel.models;
 
-import java.util.Date;
-import java.util.Objects;
+import java.time.LocalDate;
 
 public class Reserva {
-    private int id;
-    private Date dataReserva;
+    public enum StatusReserva { ATIVA, CANCELADA }
+
+    private final int id;
+    private final Cliente cliente;
+    private final Item item;
+    private final LocalDate dataInicio;
+    private final LocalDate dataFim;
     private StatusReserva status;
-    private Item item;
 
-    public enum StatusReserva {
-        PENDENTE, CONFIRMADA, CANCELADA
-    }
-
-    public Reserva(int id, Date dataReserva) {
-        this.id = id;
-        this.dataReserva = Objects.requireNonNull(dataReserva, "Data da reserva não pode ser nula");
-        this.status = StatusReserva.PENDENTE; 
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public Date getDataReserva() {
-        return dataReserva;
-    }
-
-    public StatusReserva getStatus() {
-        return status;
-    }
-
-    public void setDataReserva(Date novaData) {
-        this.dataReserva = Objects.requireNonNull(novaData, "Nova data não pode ser nula");
-    }
-
-    public Item getItem() {
-        return item;
-    }
-
-    public void setItem(Item item) {
-        this.item = item;
-    }
-
-    // Método para cancelamento
-    public void cancelar() {
-        if (status == StatusReserva.CANCELADA) {
-            throw new IllegalStateException("Reserva já está cancelada");
+    public Reserva(int id, Cliente cliente, Item item, LocalDate dataInicio, LocalDate dataFim) {
+        if (dataFim.isBefore(dataInicio)) {
+            throw new IllegalArgumentException("Data final inválida");
         }
-        this.status = StatusReserva.CANCELADA;
+        
+        this.id = id;
+        this.cliente = cliente;
+        this.item = item;
+        this.dataInicio = dataInicio;
+        this.dataFim = dataFim;
+        this.status = StatusReserva.ATIVA;
     }
 
-    @Override
-    public String toString() {
-        return String.format("Reserva [ID: %d | Data: %s | Status: %s]", id, dataReserva, status);
+    // Getters
+    public int getId() { return id; }
+    public Cliente getCliente() { return cliente; }
+    public Item getItem() { return item; }
+    public LocalDate getDataInicio() { return dataInicio; }
+    public LocalDate getDataFim() { return dataFim; }
+    public StatusReserva getStatus() { return status; }
+
+    public boolean cancelar() {
+        if (status == StatusReserva.CANCELADA) return false;
+        status = StatusReserva.CANCELADA;
+        return true;
     }
 }

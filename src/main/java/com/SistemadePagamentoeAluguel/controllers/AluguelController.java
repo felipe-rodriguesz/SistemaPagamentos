@@ -3,76 +3,68 @@ package main.java.com.SistemadePagamentoeAluguel.controllers;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
-import main.java.com.SistemadePagamentoeAluguel.models.Aluguel;
-import main.java.com.SistemadePagamentoeAluguel.models.Aluguel.StatusAluguel;
-import main.java.com.SistemadePagamentoeAluguel.models.Cliente;
-import main.java.com.SistemadePagamentoeAluguel.models.Item;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import main.java.com.SistemadePagamentoeAluguel.models.*;
 
 public class AluguelController {
-    private List<Aluguel> alugueis;
-    private int idCounter = 1;
+    private final List<Aluguel> alugueis = new ArrayList<>();
+    private final AtomicInteger idCounter = new AtomicInteger(1);
 
-    public AluguelController() {
-        this.alugueis = new ArrayList<>();
+    public Optional<Aluguel> criarAluguel(Cliente cliente, Item item, LocalDate dataInicio, LocalDate dataFim) {
+        if (cliente == null || item == null) {
+            System.out.println("[ERRO] Cliente ou item inválido");
+            return Optional.empty();
+        }
+
+        if (!item.isDisponivel()) {
+            System.out.println("[ERRO] Item já está alugado");
+            return Optional.empty();
+        }
+
+        try {
+            Aluguel aluguel = new Aluguel(
+                idCounter.getAndIncrement(),
+                cliente,
+                item,
+                dataInicio,
+                dataFim
+            );
+            
+            item.marcarComoAlugado();
+            alugueis.add(aluguel);
+            System.out.println("[SUCESSO] Aluguel ID: " + aluguel.getId());
+            return Optional.of(aluguel);
+            
+        } catch (IllegalArgumentException e) {
+            System.out.println("[ERRO] " + e.getMessage());
+            return Optional.empty();
+        }
     }
 
-    public Aluguel alugarItem(Cliente cliente, Item item, int dias) {
-        Objects.requireNonNull(cliente, "Cliente não pode ser nulo");
-        Objects.requireNonNull(item, "Item não pode ser nulo");
+    public boolean cancelarAluguel(int idAluguel) {
+        Optional<Aluguel> aluguelOpt = buscarAluguel(idAluguel);
         
-        // Verifica se o item já está alugado
-        for (Aluguel aluguel : alugueis) {
-            if (aluguel.getStatus() == StatusAluguel.ATIVO && aluguel.getId() == item.getId()) {
-                System.out.println("Item já está alugado!");
-                return null;
+        if (aluguelOpt.isPresent()) {
+            Aluguel aluguel = aluguelOpt.get();
+            if (aluguel.cancelar()) {
+                aluguel.getItem().marcarComoDevolvido();
+                return true;
             }
         }
-
-        LocalDate dataInicio = LocalDate.now();
-        LocalDate dataFim = dataInicio.plusDays(dias);
-        Aluguel novoAluguel = new Aluguel(idCounter++, dataInicio, dataFim, StatusAluguel.ATIVO);
-        alugueis.add(novoAluguel);
-        return novoAluguel;
+        return false;
     }
 
-    public boolean renovarAluguel(Aluguel aluguel, LocalDate novaDataFim) {
-        Objects.requireNonNull(aluguel, "Aluguel não pode ser nulo");
-        Objects.requireNonNull(novaDataFim, "Nova data não pode ser nula");
-        
-        try {
-            aluguel.renovar(novaDataFim);
-            return true;
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            System.out.println(e.getMessage());
-            return false;
-        }
+    public List<Aluguel> listarAlugueisAtivos() {
+        return alugueis.stream()
+            .filter(a -> a.getStatus() == Aluguel.StatusAluguel.ATIVO)
+            .toList();
     }
 
-    public boolean cancelarAluguel(Aluguel aluguel) {
-        Objects.requireNonNull(aluguel, "Aluguel não pode ser nulo");
-        
-        try {
-            aluguel.cancelar();
-            return true;
-        } catch (IllegalStateException e) {
-            System.out.println(e.getMessage());
-            return false;
-        }
+    public Optional<Aluguel> buscarAluguel(int idAluguel) {
+        return alugueis.stream()
+            .filter(a -> a.getId() == idAluguel)
+            .findFirst();
     }
 
-    public List<Aluguel> listarAlugueis(StatusAluguel filtro) {
-        List<Aluguel> filtrados = new ArrayList<>();
-        for (Aluguel aluguel : alugueis) {
-            if (filtro == null || aluguel.getStatus() == filtro) {
-                filtrados.add(aluguel);
-            }
-        }
-        return filtrados;
-    }
-
-    public void registrarAluguel(Aluguel aluguel) {
-        Objects.requireNonNull(aluguel, "Aluguel não pode ser nulo");
-        alugueis.add(aluguel);
-    }
 }
