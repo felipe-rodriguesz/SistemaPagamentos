@@ -1,12 +1,11 @@
-package com.SistemadePagamentoeAluguel.controllers;
+package main.java.com.SistemadePagamentoeAluguel.controllers;
 
-import com.SistemadePagamentoeAluguel.models.Pagamento;
 import java.util.ArrayList;
 import java.util.List;
+import main.java.com.SistemadePagamentoeAluguel.models.Pagamento;
 
 public class PagamentoController {
     private List<Pagamento> pagamentos;
-    private int idCounter = 1;
 
     public PagamentoController() {
         this.pagamentos = new ArrayList<>();
@@ -14,36 +13,40 @@ public class PagamentoController {
 
     public Pagamento processarPagamento(double valor, String metodo) {
         if (valor <= 0) {
-            System.out.println("Erro: O valor do pagamento deve ser positivo.");
-            return null;
+            throw new IllegalArgumentException("Erro: O valor do pagamento deve ser positivo.");
         }
 
         if (!metodoValido(metodo)) {
-            System.out.println("Erro: Método de pagamento inválido.");
-            return null;
+            throw new IllegalArgumentException("Erro: Método de pagamento inválido.");
         }
 
-        Pagamento novoPagamento = new Pagamento(idCounter++, valor, metodo, "Processado");
+        Pagamento novoPagamento = new Pagamento(valor, metodo);
+        novoPagamento.processar();
         pagamentos.add(novoPagamento);
         return novoPagamento;
     }
 
-    public boolean estornarPagamento(Pagamento pagamento) {
-        if (pagamento.getStatus().equals("Processado")) {
-            return pagamento.estornar();
+    public boolean estornarPagamento(int pagamentoId) {
+        for (Pagamento pagamento : pagamentos) {
+            if (pagamento.getId() == pagamentoId) {
+                try {
+                    pagamento.estornar();
+                    return true;
+                } catch (IllegalStateException e) {
+                    System.out.println("Erro: " + e.getMessage());
+                    return false;
+                }
+            }
         }
-        System.out.println("Erro: Apenas pagamentos processados podem ser estornados.");
+        System.out.println("Erro: Pagamento não encontrado.");
         return false;
     }
 
     public String emitirRecibo(Pagamento pagamento) {
-        String recibo = "Recibo de Pagamento\n" +
-                        "ID: " + pagamento.getId() + "\n" +
-                        "Valor: R$ " + pagamento.getValor() + "\n" +
-                        "Método: " + pagamento.getMetodo() + "\n" +
-                        "Status: " + pagamento.getStatus();
-        System.out.println(recibo);
-        return recibo;
+        return String.format(
+            "Recibo de Pagamento\nID: %d\nValor: R$ %.2f\nMétodo: %s\nStatus: %s\nData: %s",
+            pagamento.getId(), pagamento.getValor(), pagamento.getMetodo(), pagamento.getStatus(), pagamento.getData()
+        );
     }
 
     private boolean metodoValido(String metodo) {

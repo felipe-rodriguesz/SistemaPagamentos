@@ -3,7 +3,6 @@ package main.java.com.SistemadePagamentoeAluguel.views;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import javax.swing.*;
-import main.java.com.SistemadePagamentoeAluguel.views.AdministradorView;
 
 public class SistemaAluguel extends JFrame {
     private AdministradorView adminView;
@@ -45,9 +44,25 @@ public class SistemaAluguel extends JFrame {
     }
 
     private void handleClienteAction(ActionEvent e) {
-        String comando = ((JButton) e.getSource()).getText();
-        JOptionPane.showMessageDialog(this, "Funcionalidade em desenvolvimento: " + comando);
+    String comando = ((JButton) e.getSource()).getText();
+    
+    switch (comando) {
+        case "Fazer Reserva":
+        case "Alugar Item":
+        case "Renovar Aluguel":
+        case "Cancelar Aluguel":
+        case "Consultar Histórico":
+            abrirPainelCliente();
+            break;
+        default:
+            JOptionPane.showMessageDialog(this, "Funcionalidade em desenvolvimento: " + comando);
     }
+}
+
+private void abrirPainelCliente() {
+    ClienteView clienteView = new ClienteView(null, null, null);
+    clienteView.exibirPainelCliente();
+}
 
     private void handleAdminAction(ActionEvent e) {
         String comando = ((JButton) e.getSource()).getText();

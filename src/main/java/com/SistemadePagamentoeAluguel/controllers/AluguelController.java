@@ -1,11 +1,13 @@
-package com.SistemadePagamentoeAluguel.controllers;
+package main.java.com.SistemadePagamentoeAluguel.controllers;
 
-import com.SistemadePagamentoeAluguel.models.Aluguel;
-import com.SistemadePagamentoeAluguel.models.Cliente;
-import com.SistemadePagamentoeAluguel.models.Item;
+import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
+import java.util.Objects;
+import main.java.com.SistemadePagamentoeAluguel.models.Aluguel;
+import main.java.com.SistemadePagamentoeAluguel.models.Aluguel.StatusAluguel;
+import main.java.com.SistemadePagamentoeAluguel.models.Cliente;
+import main.java.com.SistemadePagamentoeAluguel.models.Item;
 
 public class AluguelController {
     private List<Aluguel> alugueis;
@@ -16,42 +18,53 @@ public class AluguelController {
     }
 
     public Aluguel alugarItem(Cliente cliente, Item item, int dias) {
+        Objects.requireNonNull(cliente, "Cliente não pode ser nulo");
+        Objects.requireNonNull(item, "Item não pode ser nulo");
+        
         // Verifica se o item já está alugado
         for (Aluguel aluguel : alugueis) {
-            if (aluguel.getStatus().equals("Ativo") && aluguel.getId() == item.getId()) {
+            if (aluguel.getStatus() == StatusAluguel.ATIVO && aluguel.getId() == item.getId()) {
                 System.out.println("Item já está alugado!");
                 return null;
             }
         }
 
-        Date dataInicio = new Date();
-        Date dataDevolucao = new Date(dataInicio.getTime() + (dias * 86400000L)); // Adiciona "dias" em milissegundos
-        Aluguel novoAluguel = new Aluguel(idCounter++, dataInicio, dataDevolucao, "Ativo");
+        LocalDate dataInicio = LocalDate.now();
+        LocalDate dataFim = dataInicio.plusDays(dias);
+        Aluguel novoAluguel = new Aluguel(idCounter++, dataInicio, dataFim, StatusAluguel.ATIVO);
         alugueis.add(novoAluguel);
         return novoAluguel;
     }
 
-    public boolean renovarAluguel(Aluguel aluguel, Date novaData) {
-        if (novaData.after(aluguel.getDataDevolucao())) {
-            return aluguel.renovar(novaData);
+    public boolean renovarAluguel(Aluguel aluguel, LocalDate novaDataFim) {
+        Objects.requireNonNull(aluguel, "Aluguel não pode ser nulo");
+        Objects.requireNonNull(novaDataFim, "Nova data não pode ser nula");
+        
+        try {
+            aluguel.renovar(novaDataFim);
+            return true;
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            System.out.println(e.getMessage());
+            return false;
         }
-        System.out.println("Nova data deve ser posterior à data de devolução atual.");
-        return false;
     }
 
     public boolean cancelarAluguel(Aluguel aluguel) {
-        if (new Date().before(aluguel.getDataDevolucao())) {
-            aluguel.setStatus("Cancelado");
+        Objects.requireNonNull(aluguel, "Aluguel não pode ser nulo");
+        
+        try {
+            aluguel.cancelar();
             return true;
+        } catch (IllegalStateException e) {
+            System.out.println(e.getMessage());
+            return false;
         }
-        System.out.println("Não é possível cancelar um aluguel já expirado.");
-        return false;
     }
 
-    public List<Aluguel> listarAlugueis(String filtro) {
+    public List<Aluguel> listarAlugueis(StatusAluguel filtro) {
         List<Aluguel> filtrados = new ArrayList<>();
         for (Aluguel aluguel : alugueis) {
-            if (aluguel.getStatus().equalsIgnoreCase(filtro) || filtro.isEmpty()) {
+            if (filtro == null || aluguel.getStatus() == filtro) {
                 filtrados.add(aluguel);
             }
         }
@@ -59,6 +72,7 @@ public class AluguelController {
     }
 
     public void registrarAluguel(Aluguel aluguel) {
+        Objects.requireNonNull(aluguel, "Aluguel não pode ser nulo");
         alugueis.add(aluguel);
     }
 }
