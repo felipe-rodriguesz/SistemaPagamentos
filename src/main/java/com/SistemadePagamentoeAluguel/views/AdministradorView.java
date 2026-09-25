@@ -39,35 +39,14 @@ public class AdministradorView extends JFrame {
         add(tabbedPane);
     }
 
-    // Método de Login
     public boolean solicitarLogin() {
-        JPanel painelLogin = new JPanel(new GridLayout(3, 2, 10, 10));
-        JTextField txtUsuario = new JTextField();
-        JPasswordField txtSenha = new JPasswordField();
-
-        painelLogin.add(new JLabel("Usuário:"));
-        painelLogin.add(txtUsuario);
-        painelLogin.add(new JLabel("Senha:"));
-        painelLogin.add(txtSenha);
-
         int resultado = JOptionPane.showConfirmDialog(
             this,
-            painelLogin,
-            "Login Administrativo",
+            "Este protótipo acadêmico local não possui autenticação configurada. Deseja abrir o painel administrativo?",
+            "Acesso ao Protótipo",
             JOptionPane.OK_CANCEL_OPTION
         );
-
-        if (resultado == JOptionPane.OK_OPTION) {
-            String usuario = txtUsuario.getText();
-            String senha = new String(txtSenha.getPassword());
-            return validarCredenciais(usuario, senha);
-        }
-        return false;
-    }
-
-    private boolean validarCredenciais(String usuario, String senha) {
-        // Credenciais mockadas (substituir por validação real)
-        return "admin".equals(usuario) && "admin123".equals(senha);
+        return resultado == JOptionPane.OK_OPTION;
     }
 
     // Painel de Aluguéis

@@ -13,11 +13,6 @@ public class AdministradorController {
 
     public AdministradorController(AluguelController aluguelController) {
         this.aluguelController = aluguelController;
-        carregarAdminsPadrao();
-    }
-
-    private void carregarAdminsPadrao() {
-        administradores.add(new Administrador("admin@sys.com", "admin123"));
     }
 
     public boolean autenticarAdmin(String email, String senha) {
