@@ -6,6 +6,7 @@ public class Item {
     private final int id;
     private String titulo;
     private boolean disponivel;
+    private boolean reservado;
     private TipoItem tipo;
 
     // Enum para tipos pré-definidos
@@ -20,12 +21,14 @@ public class Item {
         this.titulo = Objects.requireNonNull(titulo, "Título não pode ser nulo");
         this.tipo = Objects.requireNonNull(tipo, "Tipo não pode ser nulo");
         this.disponivel = true;
+        this.reservado = false;
     }
 
     // Getters
     public int getId() { return id; }
     public String getTitulo() { return titulo; }
     public boolean isDisponivel() { return disponivel; }
+    public boolean isReservado() { return reservado; }
     public TipoItem getTipo() { return tipo; }
 
     // Setters com validação
@@ -43,6 +46,15 @@ public class Item {
             throw new IllegalStateException("Item já está alugado");
         }
         this.disponivel = false;
+        this.reservado = false;
+    }
+
+    public void marcarComoReservado() {
+        if (!disponivel) {
+            throw new IllegalStateException("Item já está alugado ou reservado");
+        }
+        this.disponivel = false;
+        this.reservado = true;
     }
 
     public void marcarComoDevolvido() {
@@ -50,13 +62,14 @@ public class Item {
             throw new IllegalStateException("Item já está disponível");
         }
         this.disponivel = true;
+        this.reservado = false;
     }
 
     @Override
     public String toString() {
         return String.format(
             "Item [ID: %d | Título: %s | Tipo: %s | %s]",
-            id, titulo, tipo, disponivel ? "Disponível" : "Alugado"
+            id, titulo, tipo, disponivel ? "Disponível" : reservado ? "Reservado" : "Alugado"
         );
     }
 }

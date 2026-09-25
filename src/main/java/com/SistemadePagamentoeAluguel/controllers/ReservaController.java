@@ -34,7 +34,7 @@ public class ReservaController {
                 dataFim
             );
             
-            item.marcarComoAlugado();
+            item.marcarComoReservado();
             reservas.add(reserva);
             System.out.println("[SUCESSO] Reserva ID: " + reserva.getId());
             return Optional.of(reserva);

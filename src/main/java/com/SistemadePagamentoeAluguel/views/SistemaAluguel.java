@@ -1,12 +1,14 @@
 package main.java.com.SistemadePagamentoeAluguel.views;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.*;
 import main.java.com.SistemadePagamentoeAluguel.controllers.AluguelController;
 import main.java.com.SistemadePagamentoeAluguel.controllers.PagamentoController;
 import main.java.com.SistemadePagamentoeAluguel.controllers.ReservaController;
 import main.java.com.SistemadePagamentoeAluguel.models.Cliente;
+import main.java.com.SistemadePagamentoeAluguel.models.Item;
 
 public class SistemaAluguel extends JFrame {
     // Controladores e dados do cliente
@@ -14,6 +16,11 @@ public class SistemaAluguel extends JFrame {
     private final AluguelController aluguelController = new AluguelController();
     private final Cliente clientePadrao = new Cliente(1, "cliente_demo", "Cliente Demo");
     private final PagamentoController pagamentoController = new PagamentoController();
+    private final List<Item> catalogo = new ArrayList<>(List.of(
+        new Item(1, "Livro de POO", Item.TipoItem.LIVRO),
+        new Item(2, "Projetor multimídia", Item.TipoItem.EQUIPAMENTO),
+        new Item(3, "Mesa de estudo", Item.TipoItem.MOVEL)
+    ));
 
     public SistemaAluguel() {
         configurarJanela();
@@ -34,25 +41,12 @@ public class SistemaAluguel extends JFrame {
         add(tabbedPane);
     }
 
-    // Interface do Cliente (totalmente preservada)
     private JPanel criarPainelCliente() {
-        JPanel panel = new JPanel(new GridLayout(6, 1, 10, 10));
+        JPanel panel = new JPanel(new GridLayout(1, 1, 10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        
-        String[] botoes = {
-            "Fazer Reserva", 
-            "Alugar Item", 
-            "Renovar Aluguel", 
-            "Consultar Histórico",
-            "Efetuar Pagamento",
-            "Cancelar Aluguel"
-        };
-        
-        for (String titulo : botoes) {
-            JButton btn = new JButton(titulo);
-            btn.addActionListener(this::handleClienteAction);
-            panel.add(btn);
-        }
+        JButton btnAbrirCliente = new JButton("Abrir Painel do Cliente");
+        btnAbrirCliente.addActionListener(e -> abrirPainelCliente());
+        panel.add(btnAbrirCliente);
         return panel;
     }
 
@@ -69,13 +63,9 @@ public class SistemaAluguel extends JFrame {
         return panel;
     }
 
-    private void handleClienteAction(ActionEvent e) {
-        String comando = ((JButton) e.getSource()).getText();
-        abrirPainelCliente();
-    }
-
     private void abrirPainelCliente() {
-        ClienteView clienteView = new ClienteView(clientePadrao, reservaController, aluguelController);
+        ClienteView clienteView = new ClienteView(
+            clientePadrao, reservaController, aluguelController, catalogo);
         clienteView.exibirPainelCliente();
     }
 

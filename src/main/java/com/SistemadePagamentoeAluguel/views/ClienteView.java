@@ -3,10 +3,8 @@ package main.java.com.SistemadePagamentoeAluguel.views;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.swing.*;
 import main.java.com.SistemadePagamentoeAluguel.controllers.AluguelController;
 import main.java.com.SistemadePagamentoeAluguel.controllers.ReservaController;
@@ -18,16 +16,16 @@ public class ClienteView extends JFrame {
     private AluguelController aluguelController;
 
     private JTextArea areaTexto;
-    private List<Item> todosItens;
+    private final List<Item> catalogo;
     private JComboBox<String> comboItens;
     private JButton btnReservar, btnAlugar, btnRenovar, btnPagar, btnExibirRecibo, btnHistorico, btnCancelar;
 
-    public ClienteView(Cliente cliente, ReservaController reservaController, AluguelController aluguelController) {
+    public ClienteView(Cliente cliente, ReservaController reservaController,
+            AluguelController aluguelController, List<Item> catalogo) {
         this.cliente = cliente;
         this.reservaController = reservaController;
         this.aluguelController = aluguelController;
-        todosItens = reservaController.listarItensDisponiveis(new ArrayList<>());
-        configurarJanela();
+        this.catalogo = catalogo;
         configurarJanela();
         inicializarComponentes();
     }
@@ -45,13 +43,8 @@ public class ClienteView extends JFrame {
 
         JPanel painelControle = new JPanel(new FlowLayout());
 
-        // Lista de itens disponíveis filtrados
-        List<Item> itensDisponiveis = reservaController.listarItensDisponiveis(todosItens)
-                .stream().filter(Item::isDisponivel)
-                .collect(Collectors.toList());
-
-        comboItens = new JComboBox<>(itensDisponiveis.stream()
-                .map(item -> item.getId() + " - " + item.getTitulo())
+        comboItens = new JComboBox<>(catalogo.stream()
+                .map(this::formatarOpcaoItem)
                 .toArray(String[]::new));
 
         btnReservar = new JButton("Reservar");
@@ -68,17 +61,16 @@ public class ClienteView extends JFrame {
         btnExibirRecibo.addActionListener(this::exibirRecibo);
         btnHistorico.addActionListener(this::exibirHistorico);
         btnCancelar.addActionListener(this::solicitarCancelamento);
-        btnHistorico.addActionListener(this::exibirHistorico);
 
         painelControle.add(new JLabel("Selecionar Item:"));
         painelControle.add(comboItens);
         painelControle.add(btnReservar);
         painelControle.add(btnAlugar);
         painelControle.add(btnRenovar);
+        painelControle.add(btnPagar);
         painelControle.add(btnHistorico);
         painelControle.add(btnCancelar);
         painelControle.add(btnExibirRecibo);
-        painelControle.add(btnHistorico);
 
         areaTexto = new JTextArea();
         areaTexto.setEditable(false);
@@ -102,6 +94,7 @@ public class ClienteView extends JFrame {
         LocalDate dataFim = dataInicio.plusDays(7);
         Optional<Reserva> reservaOpt = reservaController.criarReserva(cliente, item, dataInicio, dataFim);
         areaTexto.setText(reservaOpt.isPresent() ? "Reserva realizada com sucesso!" : "Erro ao reservar item.");
+        if (reservaOpt.isPresent()) atualizarComboItens(item);
     }
 
     private void solicitarAluguel(ActionEvent e) {
@@ -118,9 +111,10 @@ public class ClienteView extends JFrame {
             try {
                 int dias = Integer.parseInt(diasStr);
                 LocalDate dataInicio = LocalDate.now();
-                LocalDate dataFim = dataInicio.plusDays(Integer.parseInt(diasStr));
+                LocalDate dataFim = dataInicio.plusDays(dias);
                 Optional<Aluguel> aluguelOpt = aluguelController.criarAluguel(cliente, item, dataInicio, dataFim);
                 areaTexto.setText(aluguelOpt.isPresent() ? "Aluguel realizado com sucesso!" : "Erro ao alugar item.");
+                if (aluguelOpt.isPresent()) atualizarComboItens(item);
             } catch (NumberFormatException ex) {
                 areaTexto.setText("Número de dias inválido.");
             }
@@ -128,21 +122,23 @@ public class ClienteView extends JFrame {
     }
 
     private void solicitarRenovacao(ActionEvent e) {
-        List<Aluguel> alugueis = aluguelController.listarAlugueisAtivos();
+        List<Aluguel> alugueis = listarAlugueisAtivosDoCliente();
         if (alugueis.isEmpty()) {
             areaTexto.setText("Você não tem aluguéis ativos para renovar.");
             return;
         }
 
+        Aluguel aluguel = selecionarAluguel(alugueis, "Selecione o aluguel para renovar:");
+        if (aluguel == null) return;
+
         String novaDataStr = JOptionPane.showInputDialog(this, "Digite a nova data (AAAA-MM-DD):");
         if (novaDataStr != null && !novaDataStr.isEmpty()) {
             try {
                 LocalDate novaData = LocalDate.parse(novaDataStr);
-                Item item = selecionarItem();
-                boolean sucesso = aluguelController.renovarAluguel(cliente, item, novaData);
+                boolean sucesso = aluguelController.renovarAluguel(aluguel.getId(), novaData);
                 areaTexto.setText(sucesso ? "Renovação realizada com sucesso!" : "Erro ao renovar aluguel.");
-            } catch (Exception ex) {
-                areaTexto.setText("Formato de data inválido.");
+            } catch (IllegalArgumentException ex) {
+                areaTexto.setText("Data inválida ou anterior ao fim do aluguel.");
             }
         }
     }
@@ -166,18 +162,31 @@ public class ClienteView extends JFrame {
     }
 
     private void solicitarCancelamento(ActionEvent e) {
-        List<Aluguel> alugueis = aluguelController.listarAlugueisAtivos();
+        List<Aluguel> alugueis = listarAlugueisAtivosDoCliente();
         if (alugueis.isEmpty()) {
             areaTexto.setText("Você não tem aluguéis ativos para cancelar.");
             return;
         }
 
-        Item item = selecionarItem();
-        int aluguelId = aluguelController.listarAlugueisAtivos().stream()
-                .filter(a -> a.getItem().equals(item))
-                .findFirst().map(Aluguel::getId).orElse(-1);
-        boolean sucesso = aluguelController.cancelarAluguel(aluguelId);
+        Aluguel aluguel = selecionarAluguel(alugueis, "Selecione o aluguel para cancelar:");
+        if (aluguel == null) return;
+
+        boolean sucesso = aluguelController.cancelarAluguel(aluguel.getId());
         areaTexto.setText(sucesso ? "Aluguel cancelado com sucesso!" : "Erro ao cancelar aluguel.");
+        if (sucesso) atualizarComboItens(aluguel.getItem());
+    }
+
+    private List<Aluguel> listarAlugueisAtivosDoCliente() {
+        return aluguelController.listarAlugueisAtivos().stream()
+            .filter(aluguel -> aluguel.getCliente().equals(cliente))
+            .toList();
+    }
+
+    private Aluguel selecionarAluguel(List<Aluguel> alugueis, String mensagem) {
+        Object selecionado = JOptionPane.showInputDialog(
+            this, mensagem, "Selecionar Aluguel", JOptionPane.QUESTION_MESSAGE,
+            null, alugueis.toArray(), alugueis.get(0));
+        return selecionado instanceof Aluguel ? (Aluguel) selecionado : null;
     }
 
     private void exibirHistorico(ActionEvent e) {
@@ -201,7 +210,22 @@ public class ClienteView extends JFrame {
         if (itemStr == null) return null;
 
         int id = Integer.parseInt(itemStr.split(" - ")[0]);
-        return todosItens.stream().filter(i -> i.getId() == id).findFirst().orElse(null);
+        return catalogo.stream().filter(i -> i.getId() == id).findFirst().orElse(null);
+    }
+
+    private String formatarOpcaoItem(Item item) {
+        String estado = item.isDisponivel() ? "Disponível" : item.isReservado() ? "Reservado" : "Alugado";
+        return item.getId() + " - " + item.getTitulo() + " (" + estado + ")";
+    }
+
+    private void atualizarComboItens(Item selecionado) {
+        comboItens.removeAllItems();
+        for (Item item : catalogo) {
+            comboItens.addItem(formatarOpcaoItem(item));
+            if (item == selecionado) {
+                comboItens.setSelectedIndex(comboItens.getItemCount() - 1);
+            }
+        }
     }
 
     public void exibirPainelCliente() {
