@@ -97,11 +97,18 @@ public class AluguelController {
         return alugueis;
     }
 
-    public void cancelarAluguel(int idAluguel) {
-        alugueis.stream()
+    public boolean cancelarAluguel(int idAluguel) {
+        Optional<Aluguel> aluguelOpt = alugueis.stream()
             .filter(a -> a.getId() == idAluguel)
-            .findFirst()
-            .ifPresent(Aluguel::cancelar);
+            .findFirst();
+        if (aluguelOpt.isEmpty()) {
+            return false;
+        }
+        try {
+            return aluguelOpt.get().cancelar();
+        } catch (IllegalStateException e) {
+            return false;
+        }
     }
 
     public List<Aluguel> listarAlugueis() {

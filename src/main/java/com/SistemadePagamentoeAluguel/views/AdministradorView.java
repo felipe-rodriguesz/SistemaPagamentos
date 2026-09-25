@@ -9,7 +9,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
+import java.util.Optional;
 
 public class AdministradorView extends JFrame {
     private final PagamentoController pagamentoController;
@@ -109,6 +109,56 @@ public class AdministradorView extends JFrame {
         );
     }
 
+    private void abrirDialogoNovoAluguel(DefaultTableModel modelo) {
+        JTextField campoNome = new JTextField();
+        JTextField campoEmail = new JTextField();
+        JTextField campoIdItem = new JTextField();
+        JTextField campoTituloItem = new JTextField();
+        JPanel painel = new JPanel(new GridLayout(4, 2, 5, 5));
+        painel.add(new JLabel("Nome do cliente:"));
+        painel.add(campoNome);
+        painel.add(new JLabel("E-mail do cliente:"));
+        painel.add(campoEmail);
+        painel.add(new JLabel("ID do item:"));
+        painel.add(campoIdItem);
+        painel.add(new JLabel("Título do item:"));
+        painel.add(campoTituloItem);
+
+        if (JOptionPane.showConfirmDialog(this, painel, "Novo Aluguel",
+                JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        try {
+            int itemId = Integer.parseInt(campoIdItem.getText().trim());
+            Cliente cliente = new Cliente(1, campoNome.getText().trim(), campoEmail.getText().trim());
+            Item item = new Item(itemId, campoTituloItem.getText().trim(), Item.TipoItem.OUTROS);
+            Optional<Aluguel> aluguel = aluguelController.criarAluguel(
+                cliente, item, LocalDate.now(), LocalDate.now().plusDays(7));
+            if (aluguel.isPresent()) {
+                atualizarTabelaAlugueis(modelo);
+            } else {
+                JOptionPane.showMessageDialog(this, "Não foi possível criar o aluguel.");
+            }
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, "Informe um ID de item válido.");
+        }
+    }
+
+    private void cancelarAluguel(JTable tabela, DefaultTableModel modelo) {
+        int linha = tabela.getSelectedRow();
+        if (linha < 0) {
+            JOptionPane.showMessageDialog(this, "Selecione um aluguel.");
+            return;
+        }
+        int aluguelId = (int) modelo.getValueAt(tabela.convertRowIndexToModel(linha), 0);
+        if (aluguelController.cancelarAluguel(aluguelId)) {
+            atualizarTabelaAlugueis(modelo);
+        } else {
+            JOptionPane.showMessageDialog(this, "Não foi possível cancelar o aluguel.");
+        }
+    }
+
     // Painel de Pagamentos
     private JPanel criarPainelPagamentos() {
         JPanel panel = new JPanel(new BorderLayout());
@@ -145,6 +195,50 @@ public class AdministradorView extends JFrame {
                 pagamento.getData().format(formatter)
             })
         );
+    }
+
+    private void abrirDialogoPagamento(DefaultTableModel modelo) {
+        JTextField campoValor = new JTextField();
+        JTextField campoMetodo = new JTextField();
+        JPanel painel = new JPanel(new GridLayout(2, 2, 5, 5));
+        painel.add(new JLabel("Valor:"));
+        painel.add(campoValor);
+        painel.add(new JLabel("Método (Cartão de Crédito, Boleto, Pix ou Dinheiro):"));
+        painel.add(campoMetodo);
+
+        if (JOptionPane.showConfirmDialog(this, painel, "Registrar Pagamento",
+                JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        try {
+            Pagamento pagamento = new Pagamento(
+                Double.parseDouble(campoValor.getText().trim()), campoMetodo.getText().trim());
+            pagamentoController.registrarPagamento(pagamento);
+            atualizarTabelaPagamentos(modelo);
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, "Informe um valor positivo válido.");
+        }
+    }
+
+    private void processarPagamento(JTable tabela, DefaultTableModel modelo) {
+        int linha = tabela.getSelectedRow();
+        if (linha < 0) {
+            JOptionPane.showMessageDialog(this, "Selecione um pagamento.");
+            return;
+        }
+        int pagamentoId = (int) modelo.getValueAt(tabela.convertRowIndexToModel(linha), 0);
+        pagamentoController.listarPagamentos().stream()
+            .filter(pagamento -> pagamento.getId() == pagamentoId)
+            .findFirst()
+            .ifPresentOrElse(pagamento -> {
+                try {
+                    pagamentoController.processarPagamento(pagamento);
+                    atualizarTabelaPagamentos(modelo);
+                } catch (IllegalStateException e) {
+                    JOptionPane.showMessageDialog(this, e.getMessage());
+                }
+            }, () -> JOptionPane.showMessageDialog(this, "Pagamento não encontrado."));
     }
 
     // Painel de Relatórios
