@@ -1,4 +1,4 @@
-package main.java.com.SistemadePagamentoeAluguel.models;
+package com.sistemadepagamentoealuguel.models;
 
 import java.time.LocalDate;
 import java.util.Objects;
@@ -13,10 +13,11 @@ public class Aluguel {
 
     // Enum para estados do aluguel
     public enum StatusAluguel {
-        ATIVO, CANCELADO, RENOVADO
+        ATIVO, RENOVADO, CANCELADO, DEVOLVIDO
     }
 
     public Aluguel(int id, Cliente cliente, Item item, LocalDate dataInicio, LocalDate dataFim) {
+        if (id <= 0) throw new IllegalArgumentException("ID inválido");
         validarParametros(cliente, item, dataInicio, dataFim);
         
         this.id = id;
@@ -33,11 +34,11 @@ public class Aluguel {
         Objects.requireNonNull(inicio, "Data de início não pode ser nula");
         Objects.requireNonNull(fim, "Data de fim não pode ser nula");
         
-        if (fim.isBefore(inicio)) {
-            throw new IllegalArgumentException("Data final anterior à data inicial");
+        if (!fim.isAfter(inicio)) {
+            throw new IllegalArgumentException("Data final deve ser posterior à data inicial");
         }
-        if (!item.isDisponivel()) {
-            throw new IllegalStateException("Item já está alugado/reservado");
+        if (item.isAlugado()) {
+            throw new IllegalStateException("Item já está alugado");
         }
     }
 
@@ -48,26 +49,33 @@ public class Aluguel {
     public LocalDate getDataInicio() { return dataInicio; }
     public LocalDate getDataFim() { return dataFim; }
     public StatusAluguel getStatus() { return status; }
+    public boolean isAtivo() {
+        return status == StatusAluguel.ATIVO || status == StatusAluguel.RENOVADO;
+    }
 
     // Métodos de negócio
     public boolean renovar(LocalDate novaDataFim) {
-        if (status != StatusAluguel.ATIVO) {
+        if (!isAtivo()) {
             throw new IllegalStateException("Aluguel não está ativo");
         }
-        if (novaDataFim.isBefore(dataFim)) {
-            throw new IllegalArgumentException("Nova data de fim anterior à data atual");
+        Objects.requireNonNull(novaDataFim, "Nova data de fim não pode ser nula");
+        if (!novaDataFim.isAfter(dataFim)) {
+            throw new IllegalArgumentException("Nova data de fim deve ser posterior à data atual do aluguel");
         }
         dataFim = novaDataFim;
         status = StatusAluguel.RENOVADO;
         return true;
     }
 
-    public boolean  cancelar() {
-        if (status == StatusAluguel.CANCELADO) {
-            throw new IllegalStateException("Aluguel já está cancelado");
-        }
+    public boolean cancelar() {
+        if (!isAtivo()) return false;
         status = StatusAluguel.CANCELADO;
-        item.marcarComoDevolvido(); // Libera o item
+        return true;
+    }
+
+    public boolean devolver() {
+        if (!isAtivo()) return false;
+        status = StatusAluguel.DEVOLVIDO;
         return true;
     }
 

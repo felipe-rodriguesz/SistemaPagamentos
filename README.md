@@ -11,10 +11,10 @@ Os dados existem somente durante a execução. Pagamentos são simulados localme
 ## Funcionalidades
 
 - Catálogo de itens de exemplo mantido em memória.
-- Criação de aluguéis, renovação e cancelamento.
-- Criação de reservas e controle de disponibilidade dos itens.
-- Registro local de transações de demonstração e exibição de histórico/recibo.
-- Registro e processamento local de pagamentos simulados no painel administrativo.
+- Criação de aluguel para item disponível; renovação, cancelamento e devolução.
+- Reserva de item alugado, com uma reserva ativa por item; após a devolução, o item fica reservado para essa pessoa até que alugue ou cancele a reserva.
+- Consulta de aluguéis e histórico de pagamentos do cliente, com exibição de recibo.
+- Registro, processamento e estorno de pagamentos simulados no painel administrativo.
 - Geração e visualização de relatórios de aluguéis e pagamentos.
 - Interface desktop Java Swing com painéis de cliente e administrativo.
 
@@ -29,44 +29,53 @@ Os dados existem somente durante a execução. Pagamentos são simulados localme
 - `LocalDate` e `LocalDateTime` para representar datas.
 - Validações e transições simples de regras de negócio nos modelos e controladores.
 
-O projeto não usa bibliotecas externas nem ferramenta de build. A separação em modelos, controladores e views é uma organização por responsabilidades; as telas chamam controladores e, em alguns fluxos, modelos diretamente, portanto não se apresenta como uma implementação formal de MVC.
+O projeto usa Maven para compilação, empacotamento e execução dos testes. JUnit Jupiter é usado somente nos testes. A separação em modelos, controladores e views organiza responsabilidades; as telas chamam controladores e, em alguns fluxos, modelos diretamente, portanto não se apresenta como uma implementação formal de MVC.
 
 ## Organização do código
 
-As classes estão em `src/main/java/com/SistemadePagamentoeAluguel/`, agrupadas por responsabilidade:
+O código-fonte segue a estrutura convencional de Java em `src/main/java/com/sistemadepagamentoealuguel/`:
 
 - `models/`: entidades e estados do domínio, como `Cliente`, `Item`, `Aluguel`, `Reserva`, `Pagamento` e `Relatorio`.
-- `controllers/`: operações em memória para aluguéis, reservas, pagamentos, relatórios e administração.
-- `views/`: janelas Swing; `SistemaAluguel` é a entrada principal e abre os painéis de cliente e administração.
+- `controllers/`: criação e consulta de entidades e coordenação das operações em memória de aluguel, reserva, pagamento e relatório.
+- `views/`: janelas Swing; `SistemaAluguel` é a entrada principal e compartilha os mesmos controladores entre os painéis.
 
-Os packages declarados nas classes usam o prefixo `main.java.com.SistemadePagamentoeAluguel`, que deve ser considerado ao executar a classe principal.
+Essa divisão organiza responsabilidades e não pretende implementar formalmente MVC.
 
-## Compilar e executar
+## Requisitos e execução
 
-É necessário ter o **JDK 21** instalado. Como a interface usa Java Swing, a execução requer um ambiente desktop com suporte gráfico.
+É necessário ter **JDK 21** e **Maven**. Como a aplicação usa Java Swing, abrir a interface requer um ambiente desktop com suporte gráfico.
 
-A partir da raiz do repositório, compile todas as fontes:
-
-```bash
-mkdir -p out
-javac -d out $(find src/main/java -name '*.java')
-```
-
-Inicie a aplicação:
+Na raiz do repositório, compile e execute os testes:
 
 ```bash
-java -cp out main.java.com.SistemadePagamentoeAluguel.views.SistemaAluguel
+mvn clean test
 ```
 
-As classes compiladas ficam em `out/`, diretório ignorado pelo Git.
+Para empacotar o aplicativo:
+
+```bash
+mvn package
+```
+
+Inicie a aplicação empacotada:
+
+```bash
+java -jar target/sistema-pagamentos-1.0.0.jar
+```
+
+## Roteiro de demonstração
+
+1. Abra o painel do cliente e alugue um item disponível do catálogo de exemplo.
+2. Consulte **Meus Aluguéis** e renove, cancele ou devolva o aluguel.
+3. Enquanto um item estiver alugado, registre uma reserva; ao terminar o aluguel, o item fica reservado para essa pessoa. A reserva pode ser cancelada ou convertida em aluguel pelo cliente autorizado.
+4. Registre um pagamento simulado e consulte seu recibo/histórico.
+5. Abra o painel administrativo para consultar os mesmos aluguéis e pagamentos, registrar/processar/estornar pagamentos e gerar relatórios por período.
+
+O protótipo inicia com um cliente e itens de demonstração. O painel administrativo opera sobre esses registros compartilhados; não há telas de cadastro de usuários nem de autenticação.
 
 ## Validação
 
-O repositório não possui testes automatizados nem framework de testes configurado. A validação disponível consiste em:
-
-1. Compilar as fontes com o comando acima.
-2. Executar a aplicação em um ambiente gráfico.
-3. Verificar manualmente o catálogo, operações de aluguel e reserva, renovação e cancelamento, transações simuladas e geração de relatórios.
+Os testes automatizados unitários cobrem aluguel, reserva, renovação, devolução, cancelamento, pagamentos, estornos, relatórios, validações e isolamento dos registros por cliente. A interface Swing é validada manualmente; não há testes automatizados de interface. Uma demonstração completa também pode ser feita iniciando o aplicativo com o comando acima e percorrendo os fluxos de cliente e administração.
 
 ## Diagrama preliminar
 
@@ -76,9 +85,13 @@ Diagrama de classes produzido durante o desenvolvimento inicial do projeto. Por 
 
 ## Limitações e escopo
 
-- Os dados de catálogo, clientes, aluguéis, reservas, pagamentos e relatórios são mantidos em memória e se perdem ao encerrar a aplicação; não há persistência.
-- Pagamentos são demonstrações locais e não têm integração externa.
-- A aplicação é local e não oferece API ou integração com serviços externos.
+- Os dados de catálogo, clientes, aluguéis, reservas e pagamentos são mantidos em memória e se perdem ao encerrar a aplicação; não há persistência.
+- Pagamentos são simulados localmente; não são um gateway de pagamentos ou sistema financeiro real.
+- O relatório de aluguéis filtra pela data de início do aluguel. Um aluguel iniciado antes do período selecionado pode não aparecer, mesmo que tenha permanecido ativo durante parte dele.
+- A estimativa do relatório considera o prazo integral do aluguel e a diária fixa de demonstração de R$ 100,00. Ela não representa receita financeira efetivamente recebida.
+- Pagamentos simulados são registros independentes e não são vinculados automaticamente a uma cobrança de aluguel.
+- Aluguéis vencidos não mudam de estado automaticamente: permanecem ativos até uma operação manual de devolução ou cancelamento. Essa é uma limitação deliberada do protótipo atual.
+- Reservas não expiram automaticamente; o cliente pode cancelá-las pelo painel.
 - O painel administrativo não possui autenticação real ou persistente. O acesso atual é uma confirmação para demonstração local das funções administrativas.
-- A classe de modelo `Administrador` ainda contém comparação de senha baseada em `hashCode()`, que não é adequada para proteger credenciais; ela não representa autenticação segura da aplicação.
+- A aplicação é local e não oferece API ou integrações externas.
 - Este é um protótipo acadêmico, não um sistema financeiro ou serviço pronto para produção.

@@ -1,25 +1,33 @@
-package main.java.com.SistemadePagamentoeAluguel.views;
+package com.sistemadepagamentoealuguel.views;
 
-import main.java.com.SistemadePagamentoeAluguel.controllers.*;
-import main.java.com.SistemadePagamentoeAluguel.models.*;
+import com.sistemadepagamentoealuguel.controllers.*;
+import com.sistemadepagamentoealuguel.models.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Optional;
 
 public class AdministradorView extends JFrame {
+    private final CadastroController cadastroController;
     private final PagamentoController pagamentoController;
     private final AluguelController aluguelController;
+    private final RelatorioController relatorioController;
     private JTabbedPane tabbedPane;
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    public AdministradorView(PagamentoController pagamentoController, AluguelController aluguelController) {
+    public AdministradorView(CadastroController cadastroController,
+            PagamentoController pagamentoController, AluguelController aluguelController,
+            RelatorioController relatorioController) {
+        this.cadastroController = cadastroController;
         this.pagamentoController = pagamentoController;
         this.aluguelController = aluguelController;
+        this.relatorioController = relatorioController;
         configurarJanela();
         inicializarUI();
     }
@@ -55,7 +63,7 @@ public class AdministradorView extends JFrame {
         
         // Tabela
         String[] colunas = {"ID", "Cliente", "Item", "Início", "Fim", "Status"};
-        DefaultTableModel modelo = new DefaultTableModel(colunas, 0);
+        DefaultTableModel modelo = criarModeloSomenteLeitura(colunas);
         JTable tabela = new JTable(modelo);
         atualizarTabelaAlugueis(modelo);
 
@@ -89,38 +97,35 @@ public class AdministradorView extends JFrame {
     }
 
     private void abrirDialogoNovoAluguel(DefaultTableModel modelo) {
-        JTextField campoNome = new JTextField();
-        JTextField campoEmail = new JTextField();
-        JTextField campoIdItem = new JTextField();
-        JTextField campoTituloItem = new JTextField();
-        JPanel painel = new JPanel(new GridLayout(4, 2, 5, 5));
-        painel.add(new JLabel("Nome do cliente:"));
-        painel.add(campoNome);
-        painel.add(new JLabel("E-mail do cliente:"));
-        painel.add(campoEmail);
-        painel.add(new JLabel("ID do item:"));
-        painel.add(campoIdItem);
-        painel.add(new JLabel("Título do item:"));
-        painel.add(campoTituloItem);
+        List<Cliente> clientes = cadastroController.listarClientes();
+        List<Item> itens = cadastroController.listarItens();
+        if (clientes.isEmpty() || itens.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cadastre clientes e itens antes de criar um aluguel.");
+            return;
+        }
+
+        JComboBox<Cliente> comboClientes = new JComboBox<>(clientes.toArray(Cliente[]::new));
+        JComboBox<Item> comboItens = new JComboBox<>(itens.toArray(Item[]::new));
+        JPanel painel = new JPanel(new GridLayout(2, 2, 5, 5));
+        painel.add(new JLabel("Cliente:"));
+        painel.add(comboClientes);
+        painel.add(new JLabel("Item:"));
+        painel.add(comboItens);
 
         if (JOptionPane.showConfirmDialog(this, painel, "Novo Aluguel",
                 JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) {
             return;
         }
 
-        try {
-            int itemId = Integer.parseInt(campoIdItem.getText().trim());
-            Cliente cliente = new Cliente(1, campoNome.getText().trim(), campoEmail.getText().trim());
-            Item item = new Item(itemId, campoTituloItem.getText().trim(), Item.TipoItem.OUTROS);
-            Optional<Aluguel> aluguel = aluguelController.criarAluguel(
-                cliente, item, LocalDate.now(), LocalDate.now().plusDays(7));
-            if (aluguel.isPresent()) {
-                atualizarTabelaAlugueis(modelo);
-            } else {
-                JOptionPane.showMessageDialog(this, "Não foi possível criar o aluguel.");
-            }
-        } catch (IllegalArgumentException e) {
-            JOptionPane.showMessageDialog(this, "Informe um ID de item válido.");
+        Cliente cliente = (Cliente) comboClientes.getSelectedItem();
+        Item item = (Item) comboItens.getSelectedItem();
+        Optional<Aluguel> aluguel = aluguelController.criarAluguel(
+            cliente, item, LocalDate.now(), LocalDate.now().plusDays(7));
+        if (aluguel.isPresent()) {
+            atualizarTabelaAlugueis(modelo);
+        } else {
+            JOptionPane.showMessageDialog(this,
+                "O item não está disponível ou está reservado para outro cliente.");
         }
     }
 
@@ -143,20 +148,23 @@ public class AdministradorView extends JFrame {
         JPanel panel = new JPanel(new BorderLayout());
         
         // Tabela
-        String[] colunas = {"ID", "Valor", "Método", "Status", "Data"};
-        DefaultTableModel modelo = new DefaultTableModel(colunas, 0);
+        String[] colunas = {"ID", "Cliente", "Valor", "Método", "Status", "Data"};
+        DefaultTableModel modelo = criarModeloSomenteLeitura(colunas);
         JTable tabela = new JTable(modelo);
         atualizarTabelaPagamentos(modelo);
 
         // Botões
         JButton btnRegistrar = new JButton("Registrar Pagamento");
         JButton btnProcessar = new JButton("Processar");
+        JButton btnEstornar = new JButton("Estornar");
         btnRegistrar.addActionListener(e -> abrirDialogoPagamento(modelo));
         btnProcessar.addActionListener(e -> processarPagamento(tabela, modelo));
+        btnEstornar.addActionListener(e -> estornarPagamento(tabela, modelo));
 
         JPanel painelBotoes = new JPanel();
         painelBotoes.add(btnRegistrar);
         painelBotoes.add(btnProcessar);
+        painelBotoes.add(btnEstornar);
 
         panel.add(new JScrollPane(tabela), BorderLayout.CENTER);
         panel.add(painelBotoes, BorderLayout.SOUTH);
@@ -168,7 +176,8 @@ public class AdministradorView extends JFrame {
         pagamentoController.listarPagamentos().forEach(pagamento -> 
             modelo.addRow(new Object[]{
                 pagamento.getId(),
-                String.format("R$ %.2f", pagamento.getValor()),
+                pagamento.getCliente().getNome(),
+                "R$ " + pagamento.getValor().toPlainString(),
                 pagamento.getMetodo(),
                 pagamento.getStatus(),
                 pagamento.getData().format(formatter)
@@ -176,14 +185,32 @@ public class AdministradorView extends JFrame {
         );
     }
 
+    private DefaultTableModel criarModeloSomenteLeitura(String[] colunas) {
+        return new DefaultTableModel(colunas, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+    }
+
     private void abrirDialogoPagamento(DefaultTableModel modelo) {
+        List<Cliente> clientes = cadastroController.listarClientes();
+        if (clientes.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Cadastre um cliente antes de registrar pagamentos.");
+            return;
+        }
         JTextField campoValor = new JTextField();
-        JTextField campoMetodo = new JTextField();
-        JPanel painel = new JPanel(new GridLayout(2, 2, 5, 5));
+        JComboBox<Cliente> comboClientes = new JComboBox<>(clientes.toArray(Cliente[]::new));
+        JComboBox<Pagamento.MetodoPagamento> comboMetodos =
+            new JComboBox<>(Pagamento.MetodoPagamento.values());
+        JPanel painel = new JPanel(new GridLayout(3, 2, 5, 5));
+        painel.add(new JLabel("Cliente:"));
+        painel.add(comboClientes);
         painel.add(new JLabel("Valor:"));
         painel.add(campoValor);
-        painel.add(new JLabel("Método (Cartão de Crédito, Boleto, Pix ou Dinheiro):"));
-        painel.add(campoMetodo);
+        painel.add(new JLabel("Método:"));
+        painel.add(comboMetodos);
 
         if (JOptionPane.showConfirmDialog(this, painel, "Registrar Pagamento",
                 JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) {
@@ -191,12 +218,13 @@ public class AdministradorView extends JFrame {
         }
 
         try {
-            Pagamento pagamento = new Pagamento(
-                Double.parseDouble(campoValor.getText().trim()), campoMetodo.getText().trim());
-            pagamentoController.registrarPagamento(pagamento);
+            BigDecimal valor = new BigDecimal(campoValor.getText().trim().replace(',', '.'));
+            pagamentoController.registrarPagamento(
+                (Cliente) comboClientes.getSelectedItem(), valor,
+                (Pagamento.MetodoPagamento) comboMetodos.getSelectedItem());
             atualizarTabelaPagamentos(modelo);
         } catch (IllegalArgumentException e) {
-            JOptionPane.showMessageDialog(this, "Informe um valor positivo válido.");
+            JOptionPane.showMessageDialog(this, "Informe um valor numérico positivo válido.");
         }
     }
 
@@ -207,17 +235,25 @@ public class AdministradorView extends JFrame {
             return;
         }
         int pagamentoId = (int) modelo.getValueAt(tabela.convertRowIndexToModel(linha), 0);
-        pagamentoController.listarPagamentos().stream()
-            .filter(pagamento -> pagamento.getId() == pagamentoId)
-            .findFirst()
-            .ifPresentOrElse(pagamento -> {
-                try {
-                    pagamentoController.processarPagamento(pagamento);
-                    atualizarTabelaPagamentos(modelo);
-                } catch (IllegalStateException e) {
-                    JOptionPane.showMessageDialog(this, e.getMessage());
-                }
-            }, () -> JOptionPane.showMessageDialog(this, "Pagamento não encontrado."));
+        if (pagamentoController.processarPagamento(pagamentoId)) {
+            atualizarTabelaPagamentos(modelo);
+        } else {
+            JOptionPane.showMessageDialog(this, "Pagamento não encontrado ou não está pendente.");
+        }
+    }
+
+    private void estornarPagamento(JTable tabela, DefaultTableModel modelo) {
+        int linha = tabela.getSelectedRow();
+        if (linha < 0) {
+            JOptionPane.showMessageDialog(this, "Selecione um pagamento.");
+            return;
+        }
+        int pagamentoId = (int) modelo.getValueAt(tabela.convertRowIndexToModel(linha), 0);
+        if (pagamentoController.estornarPagamento(pagamentoId)) {
+            atualizarTabelaPagamentos(modelo);
+        } else {
+            JOptionPane.showMessageDialog(this, "Pagamento não encontrado ou não pode ser estornado.");
+        }
     }
 
     // Painel de Relatórios
@@ -228,8 +264,9 @@ public class AdministradorView extends JFrame {
         
         btnGerar.addActionListener(e -> {
             DateRange periodo = obterPeriodo();
-            Relatorio relatorioAlugueis = aluguelController.gerarRelatorio("alugueis", periodo);
-            Relatorio relatorioPagamentos = pagamentoController.gerarRelatorio("pagamentos", periodo);
+            if (periodo == null) return;
+            Relatorio relatorioAlugueis = relatorioController.gerarRelatorioAlugueis(periodo);
+            Relatorio relatorioPagamentos = relatorioController.gerarRelatorioPagamentos(periodo);
             
             areaRelatorio.setText(
                 formatarRelatorio(relatorioAlugueis) + 
@@ -245,40 +282,40 @@ public class AdministradorView extends JFrame {
 
     // Métodos auxiliares
     private DateRange obterPeriodo() {
-        JDialog dialog = new JDialog(this, "Selecionar Período", true);
-        dialog.setLayout(new GridLayout(3, 2));
-        
         JSpinner inicioSpinner = new JSpinner(new SpinnerDateModel());
         JSpinner fimSpinner = new JSpinner(new SpinnerDateModel());
         inicioSpinner.setEditor(new JSpinner.DateEditor(inicioSpinner, "dd/MM/yyyy"));
         fimSpinner.setEditor(new JSpinner.DateEditor(fimSpinner, "dd/MM/yyyy"));
-        
-        dialog.add(new JLabel("Data Início:"));
-        dialog.add(inicioSpinner);
-        dialog.add(new JLabel("Data Fim:"));
-        dialog.add(fimSpinner);
-        
-        JButton btnConfirmar = new JButton("Confirmar");
-        btnConfirmar.addActionListener(e -> dialog.dispose());
-        dialog.add(btnConfirmar);
-        
-        dialog.pack();
-        dialog.setLocationRelativeTo(this);
-        dialog.setVisible(true);
+
+        JPanel painel = new JPanel(new GridLayout(2, 2, 5, 5));
+        painel.add(new JLabel("Data inicial:"));
+        painel.add(inicioSpinner);
+        painel.add(new JLabel("Data final:"));
+        painel.add(fimSpinner);
+        if (JOptionPane.showConfirmDialog(this, painel, "Selecionar Período",
+                JOptionPane.OK_CANCEL_OPTION) != JOptionPane.OK_OPTION) {
+            return null;
+        }
         
         LocalDate inicio = ((java.util.Date) inicioSpinner.getValue()).toInstant()
             .atZone(java.time.ZoneId.systemDefault()).toLocalDate();
         LocalDate fim = ((java.util.Date) fimSpinner.getValue()).toInstant()
             .atZone(java.time.ZoneId.systemDefault()).toLocalDate();
         
-        return new DateRange(inicio, fim);
+        try {
+            return new DateRange(inicio, fim);
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, "A data inicial deve ser anterior ou igual à data final.");
+            return null;
+        }
     }
 
     private String formatarRelatorio(Relatorio relatorio) {
         StringBuilder sb = new StringBuilder();
         sb.append("=== ").append(relatorio.getTipo().toUpperCase()).append(" ===\n");
-        sb.append("Período: ").append(relatorio.getDataGeracao().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().format(formatter)).append("\n");
-        sb.append("Total de Registros: ").append(relatorio.getDados().size()).append("\n\n");
+        sb.append("Período: ").append(relatorio.getPeriodo().getInicio().format(formatter))
+            .append(" a ").append(relatorio.getPeriodo().getFim().format(formatter)).append("\n");
+        sb.append("Total de Registros: ").append(relatorio.getQuantidadeRegistros()).append("\n\n");
         relatorio.getDados().forEach(linha -> sb.append(linha).append("\n"));
         return sb.toString();
     }

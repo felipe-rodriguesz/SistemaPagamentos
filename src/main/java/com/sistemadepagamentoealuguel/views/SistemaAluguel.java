@@ -1,28 +1,32 @@
-package main.java.com.SistemadePagamentoeAluguel.views;
+package com.sistemadepagamentoealuguel.views;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
 import javax.swing.*;
-import main.java.com.SistemadePagamentoeAluguel.controllers.AluguelController;
-import main.java.com.SistemadePagamentoeAluguel.controllers.PagamentoController;
-import main.java.com.SistemadePagamentoeAluguel.controllers.ReservaController;
-import main.java.com.SistemadePagamentoeAluguel.models.Cliente;
-import main.java.com.SistemadePagamentoeAluguel.models.Item;
+import com.sistemadepagamentoealuguel.controllers.AluguelController;
+import com.sistemadepagamentoealuguel.controllers.CadastroController;
+import com.sistemadepagamentoealuguel.controllers.IdGenerator;
+import com.sistemadepagamentoealuguel.controllers.PagamentoController;
+import com.sistemadepagamentoealuguel.controllers.RelatorioController;
+import com.sistemadepagamentoealuguel.controllers.ReservaController;
+import com.sistemadepagamentoealuguel.models.Cliente;
+import com.sistemadepagamentoealuguel.models.Item;
 
 public class SistemaAluguel extends JFrame {
-    // Controladores e dados do cliente
-    private final ReservaController reservaController = new ReservaController();
-    private final AluguelController aluguelController = new AluguelController();
-    private final Cliente clientePadrao = new Cliente(1, "cliente_demo", "Cliente Demo");
-    private final PagamentoController pagamentoController = new PagamentoController();
-    private final List<Item> catalogo = new ArrayList<>(List.of(
-        new Item(1, "Livro de POO", Item.TipoItem.LIVRO),
-        new Item(2, "Projetor multimídia", Item.TipoItem.EQUIPAMENTO),
-        new Item(3, "Mesa de estudo", Item.TipoItem.MOVEL)
-    ));
+    private final IdGenerator idGenerator = new IdGenerator();
+    private final CadastroController cadastroController = new CadastroController(idGenerator);
+    private final ReservaController reservaController = new ReservaController(idGenerator, cadastroController);
+    private final AluguelController aluguelController = new AluguelController(
+        idGenerator, cadastroController, reservaController);
+    private final PagamentoController pagamentoController = new PagamentoController(idGenerator, cadastroController);
+    private final RelatorioController relatorioController = new RelatorioController(
+        idGenerator, aluguelController, pagamentoController);
+    private final Cliente clientePadrao;
 
     public SistemaAluguel() {
+        clientePadrao = cadastroController.criarCliente("Cliente Demo", "cliente.demo@example.test");
+        cadastroController.criarItem("Livro de POO", Item.TipoItem.LIVRO);
+        cadastroController.criarItem("Projetor multimídia", Item.TipoItem.EQUIPAMENTO);
+        cadastroController.criarItem("Mesa de estudo", Item.TipoItem.MOVEL);
         configurarJanela();
         exibirInterface();
     }
@@ -65,12 +69,13 @@ public class SistemaAluguel extends JFrame {
 
     private void abrirPainelCliente() {
         ClienteView clienteView = new ClienteView(
-            clientePadrao, reservaController, aluguelController, catalogo);
+            clientePadrao, cadastroController, reservaController, aluguelController, pagamentoController);
         clienteView.exibirPainelCliente();
     }
 
     private void abrirAdministradorView() {
-        AdministradorView adminView = new AdministradorView(pagamentoController, aluguelController);
+        AdministradorView adminView = new AdministradorView(
+            cadastroController, pagamentoController, aluguelController, relatorioController);
         if (adminView.solicitarLogin()) {
             adminView.exibirPainelControle(); 
         } else {
