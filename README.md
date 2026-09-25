@@ -77,11 +77,15 @@ O protótipo inicia com um cliente e itens de demonstração. O painel administr
 
 Os testes automatizados unitários cobrem aluguel, reserva, renovação, devolução, cancelamento, pagamentos, estornos, relatórios, validações e isolamento dos registros por cliente. A interface Swing é validada manualmente; não há testes automatizados de interface. Uma demonstração completa também pode ser feita iniciando o aplicativo com o comando acima e percorrendo os fluxos de cliente e administração.
 
-## Diagrama preliminar
+## Diagrama de classes
 
-Diagrama de classes produzido durante o desenvolvimento inicial do projeto. Por se tratar de uma versão preliminar, algumas classes e assinaturas podem diferir da implementação atual.
+O [diagrama de classes atual](docs/diagrama-classes.md) é editável em Mermaid e representa as classes e relações da versão presente no repositório.
 
-![Diagrama de classes UML preliminar](docs/diagrama-classes-preliminar.jpg)
+### Diagrama preliminar — versão inicial
+
+A imagem abaixo foi produzida durante o desenvolvimento inicial. Ela é mantida como registro histórico e não representa a arquitetura atual.
+
+![Diagrama de classes UML preliminar — versão inicial](docs/diagrama-classes-preliminar.jpg)
 
 ## Limitações e escopo
 
